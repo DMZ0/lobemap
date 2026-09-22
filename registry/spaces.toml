@@ -85,12 +85,6 @@ notes = """Whole CNS: 753 x 627 x 1077 um, 8 nm voxels. Brain-only work must \
 exclude the VNC -- the ROI tree splits into CentralBrain, Optic(L), Optic(R), \
 VNC and CV, so brain = CentralBrain + Optic(L) + Optic(R)."""
 
-[JRC2018U]
-title = "JRC2018 Unisex"
-units = "um"
-flybrains_template = "JRC2018U"
-notes = "LM template space; carries the real nc82 channel."
-
 [GRABE]
 # Confocal, so the optical axis is antero-posterior. Names give anterior -y
 # and dorsal -z, at a weaker 0.75 dominance than the EM volumes -- this is

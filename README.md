@@ -33,18 +33,17 @@ Then fetch the data, which is published separately rather than committed:
 uv run lobemap fetch
 ```
 
-That is 76 MB and enough to open every scene. The three virtual stains are
-held back because they are 2.4 GB; `uv run lobemap fetch --all` includes
-them, or name one to get it on its own.
+That is 76 MB: every atlas, every neuropil set and the Grabe confocal
+stack, which is enough to open all four spaces. It leaves out the virtual
+stains, described under [Data](#data) below, because they are 2.4 GB.
 
 ## Quick start
 
 ```bash
-uv run lobemap view GRABE
+uv run lobemap
 ```
 
-That opens the Grabe 2015 space. To list what else is available, and what
-each one will put on screen:
+That opens FAFB. To list the spaces and what each will put on screen:
 
 ```bash
 uv run lobemap spaces
@@ -71,16 +70,17 @@ installed package, so the commands work from any directory.
 | JRCFIB2022M (male CNS) | neuPrint male CNS | 116 |
 | GRABE | Grabe 2015 | 108 |
 
-Each space also carries its brain neuropils, and most carry a reference
-image: the Grabe confocal stack, or a **virtual neuropil stain** — the
-density of predicted presynapses, binned and blurred to something that looks
-like an nc82 antibody stain, computed natively in each EM volume rather than
-warped in from light microscopy.
+Each space also carries its brain neuropils and one reference image. For
+Grabe, which is light microscopy, that is its own confocal stack. For the
+three EM spaces it is a **virtual neuropil stain**: the density of
+predicted presynapses, binned and blurred into something that reads like an
+nc82 antibody stain, computed natively in each volume rather than warped in
+from light microscopy.
 
 Glomerulus names are scoped to a space. Two atlases can only be superimposed
 if they share one, so that is the only place their names have to agree, and
 each space keeps its own vocabulary rather than deferring to a single
-authority. Switching scenes may therefore change both the list of glomeruli
+authority. Switching space may therefore change both the list of glomeruli
 and their colours.
 
 ## Data
@@ -88,9 +88,16 @@ and their colours.
 None of the data is committed. All fourteen artifacts are published as
 assets on the [`data-v1`
 release](https://github.com/DMZ0/lobemap/releases/tag/data-v1) — 2.51 GB,
-of which the three virtual stains are 2.44 GB. `registry/manifest.toml`
-records the sha256 of every one, and `lobemap fetch` checks each download
-against it; a file that does not match is discarded rather than kept.
+of which the three virtual stains are 2.44 GB, which is why a plain `fetch`
+leaves them out. `registry/manifest.toml` records the sha256 of every one,
+and `lobemap fetch` checks each download against it; a file that does not
+match is discarded rather than kept.
+
+```bash
+uv run lobemap fetch --all
+```
+
+gets the stains as well, or name one to fetch it on its own.
 
 `lobemap view` fetches anything a scene needs and cannot find, so in
 practice the explicit `fetch` above is a way to get it over with rather
@@ -136,6 +143,10 @@ stamps the date it ran — but its *content* hash is, and the build prints it.
   channel — is shown whenever it has been fetched. `--show` turns on a
   layer that is off, by asset id or by role, for example `--show
   neuropil`.
+- The axis indicator in the bottom-left corner is labelled anatomically,
+  as a direction of travel: `P->A` on the axis that runs posterior to
+  anterior. Which array axis that is differs between spaces, so the labels
+  change when you switch.
 
 Both the mesh and contour layers stay in the layer list in either mode; the
 one the current mode cannot draw is simply switched off.

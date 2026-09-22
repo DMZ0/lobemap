@@ -13,6 +13,16 @@ draws -- one arrow per array axis, pointing along INCREASING index -- so the
 arrow and its label agree: "A->P" means that going that way takes you from
 anterior to posterior.
 
+napari 0.9 offers two: a SCENE overlay drawn at the world origin, and a
+CANVAS overlay anchored in a corner. This uses the canvas one, because the
+world origin is not inside the data. Spaces are in the coordinates their
+volume was published in, and only some of them start at zero: FAFB's stain
+spans x 192-853 um, so an indicator at the origin sits ~190 um outside
+everything on screen and the default view simply does not contain it. The
+male CNS starts at 37 um and showed part of one. Anchoring to the canvas
+makes it independent of where the data happens to sit, and of pan and
+zoom.
+
 There used to be a second, world-space `anatomical axes` Vectors layer here
 as well, coloured per anatomical axis and pointing at each positive pole.
 Two indicators for one thing was already redundant, and worse, they
@@ -85,15 +95,22 @@ def label_viewer_axes(viewer, space) -> bool:
         viewer.dims.axis_labels = labels
     except Exception:            # noqa: BLE001 - cosmetic, never fatal
         return False
-    # napari 0.9 moved the overlay under `viewer.scene.overlays` and warns on
-    # the old attribute; a napari that exposes neither is not a failure.
+    # The canvas overlay, not the scene one: see the module docstring. Both
+    # exist in napari 0.9 under `canvas.overlays` and `scene.overlays`;
+    # older napari has only `viewer.axes`, which is the canvas-anchored one.
     overlay = None
-    scene = getattr(viewer, "scene", None)
-    if scene is not None:
-        overlay = getattr(getattr(scene, "overlays", None), "axes", None)
+    for holder in ("canvas", "scene"):
+        container = getattr(getattr(viewer, holder, None), "overlays", None)
+        if container is not None:
+            with contextlib.suppress(Exception):
+                overlay = container["axes"]
+            if overlay is not None:
+                break
     if overlay is None:
         with contextlib.suppress(Exception):
             overlay = viewer.axes
+    if overlay is None:
+        return True             # labels landed; the indicator is cosmetic
     with contextlib.suppress(Exception):
         overlay.visible = True
         overlay.labels = True

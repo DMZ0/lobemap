@@ -37,8 +37,13 @@
 
 - Removed the scene concept. `registry/scenes.toml`, `Scene`, `LayerSpec`, `lobemap scenes` and `lobemap view --scene` are gone; a space is the unit the viewer opens. A scene was never a different view of the data — `build_scene` takes a space and loads every atlas native to it, and the preset was applied afterwards and set nothing but `.visible`, so two scenes on one space held identical layers. `spaces.toml` gains `primary_atlas`, replacing `default_scene`, and the rest follows from an asset's role. `lobemap spaces` now reports what each space opens with. The one preset not reproduced is `hemibrain_three_ways`, which is two clicks in the compartment panel.
 
+- `lobemap` with no arguments opens the viewer on FAFB, rather than exiting with a usage message. `lobemap view` also takes the default.
+- Removed the JRC2018U space. It held no atlas, so there was nothing to open in it, and it appeared in `lobemap spaces` as though there were.
+- Removed ten unused folders from `datasets/`: banc, comparative-atlases, door, edmond-fibsem, flywire, flywire-codex, laissue-1999, potter-task-2022, reference-tables and vfb. No recipe or module read any of them. `docs/data-sources.md` is rewritten around the six atlases the viewer actually opens.
+
 ### Fixes
 
+- The anatomical axis indicator is drawn as a canvas overlay rather than a scene one, so it is visible in the default view of every space. A scene overlay sits at the world origin, which is not inside the data: FAFB spans x 192-853 um, so its indicator was ~190 um off-screen, and the male CNS showed part of one.
 - Removed three `*_stain.progress.log` files committed by accident.
 - A data release no longer starts a PyPI workflow run. It fired on every published release and failed at the tag check, mailing a failure for a release that was never meant to build a package.
 

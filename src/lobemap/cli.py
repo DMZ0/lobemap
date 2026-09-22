@@ -12,6 +12,12 @@ from . import __version__
 
 DEFAULT_REGISTRY = Path(__file__).resolve().parents[2] / "registry"
 
+#: The space `lobemap` and `lobemap view` open when none is named. FAFB is
+#: the whole adult brain at synaptic resolution and the space the
+#: nomenclature is anchored in, so it is the least surprising thing to see
+#: first. `lobemap spaces` lists the others.
+DEFAULT_SPACE = "FAFB14"
+
 
 def _registry_root(args) -> Path:
     return Path(args.registry or os.environ.get("LOBEMAP_REGISTRY") or DEFAULT_REGISTRY)
@@ -1126,7 +1132,9 @@ def main(argv: list[str] | None = None) -> int:
     bd.set_defaults(func=cmd_build)
 
     v = sub.add_parser("view", help="open a coordinate space")
-    v.add_argument("space", help="space id; `lobemap spaces` lists them")
+    v.add_argument("space", nargs="?", default=DEFAULT_SPACE,
+                   help=f"space id; `lobemap spaces` lists them "
+                        f"(default: {DEFAULT_SPACE})")
     v.add_argument("--ndisplay", type=int, default=3, choices=(2, 3))
     v.add_argument("--show", action="append", metavar="LAYER",
                    help="start this layer visible; an asset id or a role "
@@ -1241,6 +1249,13 @@ def main(argv: list[str] | None = None) -> int:
     np_.set_defaults(func=cmd_ingest_neuprint)
 
 
+    # Bare `lobemap` opens the viewer. argparse would otherwise exit 2 with
+    # a usage message, which is the right answer for a mistyped command and
+    # the wrong one for the command a GUI application is mostly used for.
+    # An explicit argv of [] is left alone: a caller passing an empty list
+    # means it, whereas None means "read sys.argv".
+    if argv is None and len(sys.argv) == 1:
+        argv = ["view"]
     args = p.parse_args(argv)
     return args.func(args)
 

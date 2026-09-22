@@ -147,9 +147,18 @@ def test_lateral_points_at_declared_right_where_sides_are_biological(
     assert float(np.dot(direction, frame["R"])) > 0.9
 
 
-def test_a_space_without_axes_gets_no_frame(registry):
-    space = registry.spaces["JRC2018U"]
-    assert not (space.anterior and space.dorsal), "fixture assumption changed"
+def test_a_space_without_axes_gets_no_frame():
+    """Built here rather than taken from the registry.
+
+    This used to borrow JRC2018U, which declared no axes because nothing
+    was ever shown in it. That space has been removed, and the behaviour
+    under test is about a Space with no axes rather than about any
+    particular one.
+    """
+    from lobemap.core.model import Space
+
+    space = Space(id="NOAXES", title="no axes", units="um")
+    assert not (space.anterior and space.dorsal)
     assert anatomical_axes(space) is None
     assert axis_labels_for(space) is None
 
@@ -214,19 +223,46 @@ def test_no_axes_layer_is_created(registry):
         viewer.close()
 
 
-def test_the_overlay_is_turned_on_and_named(registry):
+@pytest.mark.parametrize("space_id",
+                         ["FAFB14", "JRCFIB2018F", "JRCFIB2022M", "GRABE"])
+def test_the_overlay_is_turned_on_and_named(registry, space_id):
+    napari = pytest.importorskip("napari")
+    from lobemap.viewer.app import build_scene
+
+    viewer = napari.Viewer(show=False)
+    try:
+        build_scene(viewer, registry, space_id)
+        assert tuple(viewer.dims.axis_labels) == axis_labels_for(
+            registry.spaces[space_id]
+        )
+        overlay = viewer.canvas.overlays["axes"]
+        assert overlay.visible is True
+        assert overlay.labels is True
+    finally:
+        viewer.close()
+
+
+def test_the_indicator_is_anchored_to_the_canvas_not_the_data(registry):
+    """Otherwise it is off-screen in the spaces that do not start at zero.
+
+    napari 0.9 has two axis indicators: a scene overlay at the world
+    origin and a canvas overlay in a corner. A space is in whatever
+    coordinates its volume was published in, and only some begin at zero
+    -- FAFB's data spans x 192-853 um, so an indicator at the origin lies
+    ~190 um outside everything the default view contains, and was simply
+    invisible. The male CNS starts at 37 um and showed part of one.
+    """
     napari = pytest.importorskip("napari")
     from lobemap.viewer.app import build_scene
 
     viewer = napari.Viewer(show=False)
     try:
         build_scene(viewer, registry, "FAFB14")
-        assert tuple(viewer.dims.axis_labels) == axis_labels_for(
-            registry.spaces["FAFB14"]
-        )
-        overlay = viewer.scene.overlays.axes
-        assert overlay.visible is True
-        assert overlay.labels is True
+        assert viewer.canvas.overlays["axes"].visible is True
+        # And only one of them, or the canvas gets two sets of arrows.
+        assert viewer.scene.overlays["axes"].visible is False
+        # The property that makes it immune: a canvas anchor.
+        assert viewer.canvas.overlays["axes"].position is not None
     finally:
         viewer.close()
 
@@ -237,8 +273,11 @@ def test_a_space_without_axes_leaves_the_labels_alone(registry):
 
     viewer = napari.Viewer(ndisplay=3, show=False)
     try:
+        from lobemap.core.model import Space
+
         before = tuple(viewer.dims.axis_labels)
-        assert label_viewer_axes(viewer, registry.spaces["JRC2018U"]) is False
+        space = Space(id="NOAXES", title="no axes", units="um")
+        assert label_viewer_axes(viewer, space) is False
         assert tuple(viewer.dims.axis_labels) == before
     finally:
         viewer.close()

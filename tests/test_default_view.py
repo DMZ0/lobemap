@@ -340,9 +340,10 @@ def test_fit_view_keeps_the_orientation(viewer):
 
 
 def test_a_space_with_no_atlases_has_no_primary():
-    """JRC2018U is a bridging target, never opened."""
-    reg = Registry.load(REGISTRY)
-    assert reg.primary_atlas("JRC2018U") is None
+    """Nothing to open means nothing to open ON, rather than a crash."""
+    reg = Registry.load(REGISTRY, validate=False)
+    reg.spaces["EMPTY"] = Space(id="EMPTY", title="empty", units="um")
+    assert reg.primary_atlas("EMPTY") is None
 
 
 def test_the_initial_fit_follows_the_canvas(viewer):
