@@ -464,10 +464,16 @@ def _add_images(viewer, registry: Registry, space: str) -> list:
 #: surfaces were detached: GRABE has one and survives, JRCFIB2018F has four
 #: and faults on the second switch.
 #:
-#: Set False to trade the layer-list behaviour for a viewer that does not
-#: crash on a scene switch in 2D. Measured: with detaching on, 2D switching
-#: faults every run; with it off, every combination tested survives.
-DETACH_UNUSABLE_LAYERS = True
+#: So it is OFF. A layer list that hides what the current mode cannot draw
+#: is worth less than a viewer that does not take the process down: with
+#: detaching on, switching scenes in 2D faults every run; with it off, every
+#: combination tested survives. Unusable layers are still hidden, so the
+#: canvas shows the same thing either way -- what changes is that they stay
+#: listed, greyed out, instead of disappearing.
+#:
+#: Set True to get the original behaviour back, and do not switch scenes
+#: while in 2D.
+DETACH_UNUSABLE_LAYERS = False
 
 
 def install_display_mode(viewer, surfaces, contours, images=(),
