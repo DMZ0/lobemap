@@ -16,8 +16,9 @@
 - Removed the previous `lobemap.py` entry point, the `lobemap` shell wrapper
   and `scripts/`, which the rewrite supersedes. They remain on the `legacy`
   branch, as do `docs/usage.md` and the demo media that documented them.
-- `datasets/` is unchanged and still holds the published source data the
-  ingested assets are built from.
+- The published source data the ingested assets are built from is unchanged.
+  It moved from `datasets/` to `registry/sources/` later in this same
+  unreleased window; see below.
 - Version set to 0.2.0.dev0: the two declarations in `pyproject.toml` and
   `__init__.py` disagreed (0.0.0 and 0.1.0.dev0) and both sat below the
   released 0.1.4 on the same PyPI name.
@@ -40,6 +41,8 @@
 - `lobemap` with no arguments opens the viewer on FAFB, rather than exiting with a usage message. `lobemap view` also takes the default.
 - Removed the JRC2018U space. It held no atlas, so there was nothing to open in it, and it appeared in `lobemap spaces` as though there were.
 - Removed ten unused folders from `datasets/`: banc, comparative-atlases, door, edmond-fibsem, flywire, flywire-codex, laissue-1999, potter-task-2022, reference-tables and vfb. No recipe or module read any of them. `docs/data-sources.md` is rewritten around the six atlases the viewer actually opens.
+- `datasets/` is gone. The five remaining folders are `registry/sources/<dataset>/`, with the redundant `data/source/` level flattened away, and the registry is now self-contained: a recipe's `source` and its path-valued params resolve against the registry root rather than the repository root, so `--registry` can point anywhere. The per-dataset napari modules and the 256-cube label caches were not carried over — they belong to the viewer this one replaced and are on the `legacy` branch, which still holds the whole original tree.
+- `--data-root` is honoured by `validate`, `check`, `reconcile`, `bridge` and `build`, which all built a registry without it. It mattered most in `build`, which resolved its target against the default root, so building into a scratch data root overwrote the real asset.
 
 ### Fixes
 

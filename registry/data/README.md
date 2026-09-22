@@ -39,7 +39,7 @@ Then ingested with `lobemap.ingest.obj_archive.ingest(<zip>)`.
 ## Grabe 2015
 
 Surfaced from the Amira label volume (not the OBJ export), plus the confocal
-stack, both from `lobemap/datasets/grabe-2015/data/source/`:
+stack, both from `registry/sources/grabe-2015/`:
 
 ```python
 from lobemap.ingest.label_volume import ingest as ingest_labels

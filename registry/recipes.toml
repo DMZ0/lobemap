@@ -15,14 +15,14 @@
 
 # -- Grabe 2015 -----------------------------------------------------------
 # Entirely offline: the confocal stack and the Amira label volume both ship
-# in datasets/. Both TIFFs are (119, 514, 513) in z, y, x, so they share a
+# in registry/sources/. Both TIFFs are (119, 514, 513) in z, y, x, so they share a
 # grid and take the same voxel size and transpose.
 
 [grabe2015_glomeruli]
 pipeline = "label_volume"
-source = "datasets/grabe-2015/data/source/Merged_2-101221a-labels_only_sure_ones_Sensillarcolors.tif"
+source = "sources/grabe-2015/Merged_2-101221a-labels_only_sure_ones_Sensillarcolors.tif"
 [grabe2015_glomeruli.params]
-materials = "datasets/grabe-2015/data/source/Merged_2-101221a-labels_only_sure_ones_Sensillarcolors.am"
+materials = "sources/grabe-2015/Merged_2-101221a-labels_only_sure_ones_Sensillarcolors.am"
 voxel_um_zyx = [0.96, 0.34, 0.34]
 transpose = [2, 1, 0]
 mask_sigma_um = 1.0
@@ -31,15 +31,15 @@ smooth = 0
 
 [grabe2015_labels]
 pipeline = "label_masks"
-source = "datasets/grabe-2015/data/source/Merged_2-101221a-labels_only_sure_ones_Sensillarcolors.tif"
+source = "sources/grabe-2015/Merged_2-101221a-labels_only_sure_ones_Sensillarcolors.tif"
 [grabe2015_labels.params]
-materials = "datasets/grabe-2015/data/source/Merged_2-101221a-labels_only_sure_ones_Sensillarcolors.am"
+materials = "sources/grabe-2015/Merged_2-101221a-labels_only_sure_ones_Sensillarcolors.am"
 voxel_um_zyx = [0.96, 0.34, 0.34]
 transpose = [2, 1, 0]
 
 [grabe2015_stack]
 pipeline = "image_stack"
-source = "datasets/grabe-2015/data/source/invivoALstack.tif"
+source = "sources/grabe-2015/invivoALstack.tif"
 [grabe2015_stack.params]
 space = "GRABE"
 voxel_um_zyx = [0.96, 0.34, 0.34]
@@ -52,11 +52,11 @@ role = "template_image"
 # Volume.save dispatches on the registry path's suffix.
 
 # -- FAFB atlases ---------------------------------------------------------
-# Offline; the source ships in datasets/.
+# Offline; the source ships in registry/sources/.
 
 [benton2025_glomeruli]
 pipeline = "slicer_vtm"
-source = "datasets/benton-2025/data/source/BentonDatasetEV2/DatasetEV2.seg.vtm"
+source = "sources/benton-2025/BentonDatasetEV2/DatasetEV2.seg.vtm"
 [benton2025_glomeruli.params]
 # Delivered in 3D Slicer RAS; negating x and y puts its centroid cloud 0.0 um
 # from Bates.

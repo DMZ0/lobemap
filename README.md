@@ -118,7 +118,7 @@ uv run lobemap build hemibrain_stain
 Each stain needs several gigabytes downloaded from the published synapse
 releases, about 40 GB of scratch space, and a long run, so `build --all`
 skips them and they have to be asked for by name. Everything else is
-derived from sources that either ship in `datasets/` or are downloaded
+derived from sources that either ship in `registry/sources/` or are downloaded
 automatically; `registry/recipes.toml` records exactly how.
 
 A rebuilt asset is not byte-identical to the original — every pipeline
@@ -180,8 +180,8 @@ geometry (`reconcile`) and moving geometry between spaces (`bridge`).
 This is a fork of [lobemap](https://github.com/gumadeiras/lobemap) by
 Gustavo Madeira Santana. The viewer has been rewritten around coordinate
 spaces, and the ingest, registry and validation are new, but the curated
-nomenclature tables and the source datasets under `datasets/` come from the
-original and remain its work.
+nomenclature tables and the published source data under `registry/sources/`
+come from the original and remain its work.
 
 ## License
 

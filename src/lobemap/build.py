@@ -1,5 +1,8 @@
 """Derive a built asset from its source, per `registry/recipes.toml`.
 
+Sources are addressed relative to the registry root: `sources/<dataset>/...`
+for what ships, or a URL for what is downloaded. See `registry/sources/`.
+
 Every asset under `registry/data/` is derived, which is the justification for
 keeping the large ones out of git. That justification was only half true: the
 pipelines all existed, but which one to run for which asset, and with what
@@ -87,15 +90,22 @@ def load_recipes(registry_root) -> dict[str, Recipe]:
     return out
 
 
-def resolve_source(recipe: Recipe, repo_root: Path, cache: Path,
+def resolve_source(recipe: Recipe, registry_root: Path, cache: Path,
                    progress=None) -> Path | None:
-    """The local file a recipe reads, downloading it first if it is a URL."""
+    """The local file a recipe reads, downloading it first if it is a URL.
+
+    A `source` is relative to the REGISTRY root, so a registry is
+    self-contained: point `--registry` or `LOBEMAP_REGISTRY` at a copy
+    somewhere else and its recipes still resolve. They used to be relative
+    to the repository root and to begin `datasets/`, which meant a recipe
+    only worked from inside a checkout laid out exactly one way.
+    """
     if recipe.source:
-        path = repo_root / recipe.source
+        path = registry_root / recipe.source
         if not path.exists():
             raise FileNotFoundError(
-                f"{recipe.asset}: source {recipe.source} is missing. It is "
-                f"expected to ship in the repository."
+                f"{recipe.asset}: source {recipe.source} is missing from "
+                f"{registry_root}. It is expected to ship in the registry."
             )
         return path
     if recipe.urls:
@@ -279,11 +289,32 @@ def _virtual_stain(src, params, progress=None, workdir=None, **_):
 # -- driver ---------------------------------------------------------------
 
 
+def _resolve_param_paths(params: dict, registry_root: Path) -> dict:
+    """Make `sources/...` params absolute, the way `source` already is.
+
+    `label_volume` takes the Amira material table as a param rather than as
+    its source, because the pipeline reads two files. That path was handed
+    to `open()` as written, so it resolved against the CURRENT DIRECTORY and
+    a build only worked when run from the repository root -- while the CLI
+    finds its registry relative to the installed package and otherwise works
+    from anywhere.
+
+    The rule is the prefix: a param that begins `sources/` names a file in
+    the registry, so it is resolved there. Anything else is passed through,
+    because most params are numbers.
+    """
+    prefix = "sources/"
+    return {
+        k: str(registry_root / v)
+        if isinstance(v, str) and v.startswith(prefix) else v
+        for k, v in params.items()
+    }
+
+
 def build_asset(registry, asset_id: str, recipes=None, progress=None,
                 overwrite: bool = False) -> BuildResult:
     """Derive one asset and write it where the registry expects it."""
     registry_root = Path(registry.root)
-    repo_root = registry_root.parent
     recipes = recipes if recipes is not None else load_recipes(registry_root)
 
     if asset_id not in recipes:
@@ -302,6 +333,8 @@ def build_asset(registry, asset_id: str, recipes=None, progress=None,
             f"{target} already exists; pass overwrite to replace it"
         )
 
+    params = _resolve_param_paths(recipe.params, registry_root)
+
     fn = _PIPELINES.get(recipe.pipeline)
     if fn is None:
         raise KeyError(
@@ -310,10 +343,10 @@ def build_asset(registry, asset_id: str, recipes=None, progress=None,
         )
 
     cache = registry.data_root / CACHE_DIR
-    src = resolve_source(recipe, repo_root, cache, progress=progress)
+    src = resolve_source(recipe, registry_root, cache, progress=progress)
     if progress:
         progress(f"{asset_id}: {recipe.pipeline}")
-    obj = fn(src, recipe.params, progress=progress,
+    obj = fn(src, params, progress=progress,
              workdir=registry.data_root / ".stainwork")
 
     target.parent.mkdir(parents=True, exist_ok=True)

@@ -563,7 +563,8 @@ def cmd_validate(args) -> int:
     from .core.registry import Registry, RegistryError
 
     try:
-        reg = Registry.load(_registry_root(args))
+        root = _registry_root(args)
+        reg = Registry.load(root, data_root=_data_root(args, root))
         warnings = reg.validate(strict_templates=args.strict)
     except RegistryError as exc:
         print(exc, file=sys.stderr)
@@ -636,7 +637,8 @@ def cmd_check(args) -> int:
     from .validate import geometry as g
     from .validate import images as gi
 
-    reg = Registry.load(_registry_root(args))
+    root = _registry_root(args)
+    reg = Registry.load(root, data_root=_data_root(args, root))
     checks = []
 
     for atlas in reg.atlases.values():
@@ -891,7 +893,8 @@ def cmd_reconcile(args) -> int:
     from .core.resolve import resolve
     from .validate.reconcile import format_report, reconcile
 
-    reg = Registry.load(_registry_root(args))
+    root = _registry_root(args)
+    reg = Registry.load(root, data_root=_data_root(args, root))
     a_atlas, b_atlas = reg.atlases[args.a], reg.atlases[args.b]
     space = args.space or a_atlas.native_space
     a = (reg.mesh(a_atlas.asset) if a_atlas.native_space == space
@@ -913,7 +916,8 @@ def cmd_bridge(args) -> int:
     from .core.registry import Registry
     from .core.resolve import cache_root, resolve
 
-    reg = Registry.load(_registry_root(args))
+    root = _registry_root(args)
+    reg = Registry.load(root, data_root=_data_root(args, root))
     t0 = time.perf_counter()
     out = resolve(
         reg, args.asset, args.to, mirror=args.mirror, use_cache=not args.no_cache
@@ -976,7 +980,8 @@ def cmd_build(args) -> int:
     from .build import build_asset, buildable, load_recipes, missing
     from .core.registry import Registry
 
-    reg = Registry.load(_registry_root(args))
+    root = _registry_root(args)
+    reg = Registry.load(root, data_root=_data_root(args, root))
     recipes = load_recipes(reg.root)
     known = buildable(reg, recipes)
 

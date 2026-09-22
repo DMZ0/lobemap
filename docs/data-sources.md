@@ -9,7 +9,7 @@ keeps the licence and citation requirements of its own publication. **If you use
 an atlas, cite the paper it came from.**
 
 Paper PDFs are not tracked. Their links are in
-[`paper_pdf_sources.csv`](../datasets/paper_pdf_sources.csv).
+[`paper-pdf-sources.csv`](../registry/sources/paper-pdf-sources.csv).
 
 ## What the viewer opens
 
@@ -18,16 +18,16 @@ and one reference image.
 
 | space | atlas | compartments | source |
 |---|---|---|---|
-| FAFB14 | Benton 2025 | 58 | Dataset EV2, ships in `datasets/` |
+| FAFB14 | Benton 2025 | 58 | Dataset EV2, ships in `registry/sources/` |
 | JRCFIB2018F | neuPrint hemibrain | 77 | neuPrint `hemibrain:v1.2.1` |
 | | Schlegel 2021 S11 | 59 | eLife supplementary file 11 |
 | | Schlegel 2021 S12 | 58 | eLife supplementary file 12 |
 | JRCFIB2022M | neuPrint male CNS | 116 | neuPrint `male-cns:v1.0` |
-| GRABE | Grabe 2015 | 108 | Amira label volume, ships in `datasets/` |
+| GRABE | Grabe 2015 | 108 | Amira label volume, ships in `registry/sources/` |
 
 ## Benton 2025 — FAFB14
 
-Folder: [`benton-2025/`](../datasets/benton-2025/)
+Folder: [`benton-2025/`](../registry/sources/benton-2025/)
 
 Glomerular segmentation of FAFB, read from the published Slicer scene
 (`DatasetEV2.seg.vtm`). The names are FAFB's vocabulary; the nomenclature table
@@ -64,7 +64,7 @@ exact commands.
 
 ## Grabe 2015 — GRABE
 
-Folder: [`grabe-2015/`](../datasets/grabe-2015/)
+Folder: [`grabe-2015/`](../registry/sources/grabe-2015/)
 
 A light-microscopy template rather than EM, and an island: no bridging
 registration connects it to any other space. Three assets come from it — the
@@ -101,16 +101,21 @@ of input that is not kept:
 | JRCFIB2022M | `gs://flyem-male-cns/v1.0/connectome-data/flat-connectome/syn-points-male-cns-v1.0-minconf-0.5.feather` |
 | FAFB14 | FAFB v783 Princeton synapse table — Dorkenwald S, et al. *Nature*, 2024. doi:10.1038/s41586-024-07558-y |
 
-## Also tracked, not used
+## Kept, not currently used
 
-Two folders predate the rewrite and nothing in the registry reads them:
-[`bates-schlegel-2020/`](../datasets/bates-schlegel-2020/) (17 MB) and
-[`hemibrain/`](../datasets/hemibrain/) (4.4 MB). Bates & Schlegel 2020 is
-superseded by Benton 2025 and its atlas was removed from the viewer; the
-`hemibrain/` meshes are superseded by the live neuPrint query.
-[`jrc2018unisex/`](../datasets/jrc2018unisex/) (39 MB) supported a JRC2018U
-space that has also been removed — it held no atlas, so there was nothing to
-open in it.
+Three source folders that no recipe reads, retained because each could be
+wanted again:
 
-They are kept for now because they came from the upstream repository, and what
-to propose removing there is a separate decision from what this viewer needs.
+- [`bates-schlegel-2020/`](../registry/sources/bates-schlegel-2020/) (16 MB) —
+  the interactive Plotly atlas. Its antennal-lobe meshes are revised by Benton
+  2025's Dataset EV2, which is why that atlas was removed from the viewer
+  rather than shown beside it.
+- [`hemibrain/`](../registry/sources/hemibrain/) (3.8 MB) — glomerulus
+  surfaces exported from `hemibrainr`, superseded by the live neuPrint query,
+  plus reference tables this viewer does not present: VFB terms, odour
+  groupings, a per-glomerulus summary.
+- [`jrc2018unisex/`](../registry/sources/jrc2018unisex/) (39 MB) — the standard
+  light-microscopy target space and VFB's ROI volumes. The `JRC2018U` space was
+  removed because no atlas was native to it, but anything warped between LM and
+  EM would route through it, and it carries a real nc82 channel — which is what
+  the virtual stains approximate.
