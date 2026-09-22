@@ -53,12 +53,6 @@ kind = "dir"
 sha256 = "b23abcf844038b14cc37022edfda187c641f9ac36c1c5ca7922f47a45cbe67b3"
 size = 415633974
 
-[artifacts.jrc2018u_nc82]
-path = "jrc2018u_nc82.zarr"
-kind = "dir"
-sha256 = "4efc6eee764d93a5b015d72736fddcfedd8c1dd6e260affcb4cbc0caf6616a6f"
-size = 43144291
-
 [artifacts.malecns_stain]
 path = "malecns_stain.zarr"
 kind = "dir"

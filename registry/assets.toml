@@ -179,28 +179,10 @@ path = "data/fafb_neuropil.npz"
 [fafb_neuropil.source]
 url = "https://github.com/navis-org/fafbseg-py"
 
-# JRC2018Unisex template image (VFB release), the real nc82 channel, kept in
-# its own space and never warped -- design section 4 defers warped templates
-# in favour of the natively-computed synapse stain.
-#
-# Unlike the ImageJ TIFFs, an NRRD carries diagonal `space directions`, so its
-# axis i already maps to world axis i and no transpose is applied. Voxel size
-# read from the header: 0.519 x 0.519 x 1.0 um, VFB's downsampling of the
-# native 0.38 um isotropic template. Extent 627.9 x 293.7 x 174.0 um against
-# the flybrains bounding box of 627.4 x 293.4 x 172.9.
-#
-# No atlas is native to JRC2018U, so alignment was validated by bridging the
-# hemibrain glomeruli in: 3.66x brighter at their centroids than background.
-[jrc2018u_nc82]
-role = "template_image"
-space = "JRC2018U"
-kind = "image"
-side = "both"
-path = "data/jrc2018u_nc82.zarr"
-[jrc2018u_nc82.source]
-url = "https://www.virtualflybrain.org/reports/JRC2018"
-doi = "10.1101/376384"
-license = "CC BY-SA 4.0"
+# The JRC2018U nc82 template image was dropped. It was never in a scene, and
+# JRC2018U has no native atlas, so the only thing it fed was a validation
+# check on a bridge into a space nothing displays. The space itself remains
+# as a bridging target.
 
 # Virtual neuropil stains: presynapse density at LM resolution, sigma 900 nm
 # on a 0.5 um grid (effective 912 nm after binning). Built from the published

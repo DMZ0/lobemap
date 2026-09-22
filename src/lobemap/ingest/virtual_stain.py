@@ -48,7 +48,7 @@ DEFAULT_VOXEL_UM = 0.5
 #: Point-spread width the method specifies.
 DEFAULT_SIGMA_UM = 0.9
 #: Stored sample type. 8-bit matches the confocal stacks this emulates --
-#: `grabe2015_stack` and `jrc2018u_nc82` are both uint8 -- and halves the
+#: `grabe2015_stack` is uint8 -- and halves the
 #: whole-brain grids. What it discards is the faint outer skirt of the blur:
 #: the voxels it rounds away all sit below 0.2% of peak.
 DEFAULT_DTYPE = np.uint8

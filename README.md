@@ -8,7 +8,7 @@ whole-brain virtual neuropil stains for all three EM volumes, stored as
 multiscale OME-Zarr; see
 [docs/status.md](docs/status.md).
 
-Scenes are organized by *coordinate space* (FAFB, hemibrain, JRC2018U, male CNS,
+Scenes are organized by *coordinate space* (FAFB, hemibrain, male CNS,
 Grabe), not by atlas. Within a scene, any number of glomerular atlases — native to that
 space or bridged into it with navis-flybrains — can be shown together alongside the
 neuropil, whole-brain, and reference-image layers belonging to that space.

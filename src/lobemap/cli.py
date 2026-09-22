@@ -459,9 +459,12 @@ def cmd_check(args) -> int:
         if peers:
             ms = reg.mesh(peers[0].asset)
         else:
-            # A space with no native atlas -- JRC2018U -- would otherwise go
-            # unchecked entirely. Bridge one in so the image is still held to
-            # the same standard.
+            # An image in a space with no native atlas would otherwise go
+            # unchecked entirely, so bridge one in and hold it to the same
+            # standard. No shipped asset reaches this today -- it was written
+            # for JRC2018U's nc82 template, which has since been dropped --
+            # but the alternative is that the next such image is silently
+            # never validated.
             for candidate in reg.atlases.values():
                 src = reg.spaces.get(candidate.native_space)
                 if src is None or src.is_island:

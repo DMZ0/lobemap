@@ -21,9 +21,13 @@ Last updated 2026-09-21.
 | M6 — reference assets and virtual stain | **done** |
 | M7 — distribution | **done** (metrics dropped, see below) |
 
-**26/26 validation checks pass. 231 tests. Lint clean.**
+**Lint clean.** Test and validation-check counts are pending a re-run:
+the built assets under `registry/data/` are currently absent, so 47 of
+the tests and every data check cannot execute. Last full run with assets
+present: 263 tests, 26/26 checks -- the check count drops by two with the
+JRC2018U nc82 image removed.
 
-Registry: 7 atlases, 5 spaces, 16 assets, 8 scene presets, 58 canonical names
+Registry: 7 atlases, 5 spaces, 15 assets, 8 scene presets, 58 canonical names
 (Benton 2025's published names, enforced by `Registry.validate`).
 All three whole-brain virtual stains are built (findings §7).
 
@@ -85,11 +89,11 @@ tests/            231 tests, offline except where marked
 - **`Volume` container and image assets** end to end: registry support,
   napari layers with `scale`/`translate` from the Volume itself.
 - **Three image validators** — covers-mesh, brightness-at-mesh,
-  inside-shell — and they run for images in a space with **no native atlas**
-  by bridging one in, which previously left JRC2018U entirely unchecked.
+  inside-shell. They can also bridge an atlas into a space with **no native
+  atlas**, so an image there is still held to the same standard; no shipped
+  asset needs that today.
 - **Grabe confocal stack** (`grabe2015_stack`), 5.70× brightness at
   glomerulus centroids.
-- **JRC2018U nc82** (`jrc2018u_nc82`), 3.81× against bridged Bates.
 - **FAFB neuropils** (`fafb_neuropil`): all 78 that
   `fafbseg.flywire.get_neuropil_volumes` serves, bridged FLYWIRE → FAFB14
   (0 warps; 10 vertices outside the offset field keep their input

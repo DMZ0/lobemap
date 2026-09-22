@@ -84,4 +84,4 @@ lobemap tozarr registry/data/malecns_stain.npz
 
 That builds a 5-6 level multiscale pyramid and leaves the three stains at
 2.30 GB in total; the `.npz`/`.npy` inputs can then be deleted. The two LM
-stacks (`grabe2015_stack`, `jrc2018u_nc82`) are stored the same way.
+stacks (`grabe2015_stack`) are stored the same way.
