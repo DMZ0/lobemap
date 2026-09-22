@@ -485,15 +485,18 @@ DETACH_UNUSABLE_LAYERS = False
 #: under the cursor in 2D, so they are also what makes a sliced glomerulus
 #: clickable and what carries the per-glomerulus slice labels.
 #:
-#: On. The alternative -- just showing the Surface layers in 2D -- was tried
-#: and does not work: napari slices a Surface by drawing the triangles that
-#: straddle the plane, so you get a shell of wandering thickness, wide where
-#: the surface runs tangent to the slice and absent where it runs
-#: perpendicular, rather than a cross-section. A boundary mesh has no
-#: interior, so nothing can fill it.
+#: On, and two layers per atlas is accepted as the cost.
 #:
-#: The contours are the exact mesh-plane intersection, are closed loops, and
-#: are drawn FILLED, which is the cross-section of the solid.
+#: The hope was that showing the Surface layers in 2D would make the Shapes
+#: layers unnecessary. It does not: napari slices a Surface by drawing the
+#: triangles that straddle the plane, so what appears is their projected
+#: footprint -- wide where the surface runs tangent to the slice, absent
+#: where it runs perpendicular. A boundary mesh has no interior, so nothing
+#: can fill it either. Drawing the exact contours FILLED did give a true
+#: cross-section, but it still needed the Shapes layer, so it bought nothing
+#: over the outlines and lost their even weight.
+#:
+#: So: outlines, and a Shapes layer beside every Surface layer.
 USE_SLICE_CONTOURS = True
 
 
@@ -629,11 +632,6 @@ def _add_contours(viewer, registry, surfaces) -> dict[str, ContourOverlay]:
             color=REFERENCE_CONTOUR_COLOR if reference else next(palette),
             width=REFERENCE_CONTOUR_WIDTH if reference else 0.35,
             selection=set(surface.selection),
-            # The filled cross-section takes the colour of its own mesh, so
-            # a glomerulus is the same colour in 2D as in 3D. Reference
-            # shells keep the single grey and are left unfilled.
-            colors=None if reference else surface.colors,
-            fill_opacity=0.0 if reference else 0.85,
         )
     # The overlays carry their own event handlers, so a scene switch can
     # disconnect them without build_scene having to hand them back.
