@@ -1,0 +1,145 @@
+"""Headless viewer tests: build a real scene from the real registry.
+
+These need a Qt display and the ingested data, so they skip cleanly when
+either is absent.
+"""
+
+from __future__ import annotations
+
+from pathlib import Path
+
+import numpy as np
+import pytest
+
+REGISTRY = Path(__file__).resolve().parents[1] / "registry"
+
+pytest.importorskip("napari")
+
+
+@pytest.fixture(scope="module")
+def registry():
+    from lobemap.core.registry import Registry
+
+    if not (REGISTRY / "data").is_dir():
+        pytest.skip("no ingested data")
+    return Registry.load(REGISTRY)
+
+
+@pytest.fixture(scope="module")
+def viewer():
+    import napari
+
+    try:
+        v = napari.Viewer(show=False, ndisplay=3)
+    except Exception as exc:  # pragma: no cover - no display
+        pytest.skip(f"no Qt display: {exc}")
+    yield v
+    v.close()
+
+
+def test_build_scene_hemibrain(registry, viewer):
+    from lobemap.viewer.app import build_scene
+
+    surfaces, _contours = build_scene(viewer, registry, "JRCFIB2018F")
+    assert "neuprint_hemibrain" in surfaces
+    s = surfaces["neuprint_hemibrain"]
+    assert s.meshset.n_compartments == 77
+    # All compartments visible by default.
+    assert len(s.layer.data[0]) == len(s.meshset.vertices)
+
+
+def test_selection_rebuilds_layer(registry, viewer):
+    from lobemap.viewer.app import build_scene
+
+    s = build_scene(viewer, registry, "JRCFIB2018F")[0]["neuprint_hemibrain"]
+    s.set_selection([0, 1])
+    s.compact()
+    v, _f, vals = s.layer.data
+    expected = sum(len(s.meshset.compartment(i)[0]) for i in (0, 1))
+    assert len(v) == expected
+    assert set(np.unique(vals)) == {0.0, 1.0}
+    s.show_none()
+    assert s.layer.visible is False
+    s.show_all()
+    s.compact()
+    assert s.layer.visible is True
+    assert len(s.layer.data[0]) == len(s.meshset.vertices)
+
+
+def test_picked_value_maps_back_to_a_name(registry, viewer):
+    from lobemap.viewer.app import build_scene
+
+    s = build_scene(viewer, registry, "JRCFIB2018F")[0]["neuprint_hemibrain"]
+    for i in (0, 5, s.meshset.n_compartments - 1):
+        assert s.name_at_value(float(i)) == s.meshset.names[i]
+    assert s.name_at_value(None) is None
+    assert s.name_at_value(10_000.0) is None
+
+
+def test_anatomy_is_plausible(registry):
+    """Guards the unit inference: a glomerulus is a glomerulus."""
+    ms = registry.mesh("neuprint_hemibrain_glomeruli")
+    per = np.array(
+        [
+            np.max(ms.compartment(i)[0].max(0) - ms.compartment(i)[0].min(0))
+            for i in range(ms.n_compartments)
+        ]
+    )
+    assert 4.0 < np.median(per) < 45.0, "glomerulus size is not anatomical"
+    # Bilateral span of the whole set.
+    assert 100.0 < ms.extent_um()[0] < 300.0
+
+
+def test_glomeruli_sit_inside_their_neuropil(registry):
+    """A cheap containment check: every glomerulus centroid is within the
+    AL neuropil bounding box for its own side."""
+    glom = registry.mesh("neuprint_hemibrain_glomeruli")
+    npil = registry.mesh("neuprint_hemibrain_neuropil")
+    boxes = {}
+    for i, name in enumerate(npil.names):
+        v, _ = npil.compartment(i)
+        side = "L" if "(L)" in name else "R"
+        boxes[side] = (v.min(0), v.max(0))
+
+    misses = []
+    for i, name in enumerate(glom.names):
+        side = "L" if name.endswith("(L)") else "R" if name.endswith("(R)") else None
+        if side is None or side not in boxes:
+            continue
+        lo, hi = boxes[side]
+        c = glom.centroid(i)
+        if not np.all((c >= lo - 1.0) & (c <= hi + 1.0)):
+            misses.append(name)
+    assert not misses, f"centroids outside their AL: {misses}"
+
+
+def test_hidden_compartment_is_not_reported_by_picking(registry, viewer):
+    """Between a toggle and compaction, hidden geometry is still resident and
+    can intercept the pick ray; it must not be named."""
+    from lobemap.viewer.app import build_scene
+
+    s = build_scene(viewer, registry, "JRCFIB2018F")[0]["neuprint_hemibrain"]
+    s.set_selection([3, 4])
+    assert s.name_at_value(3.0) == s.meshset.names[3]
+    assert s.name_at_value(0.0) is None  # hidden
+    s.show_all()
+    assert s.name_at_value(0.0) == s.meshset.names[0]
+
+
+def test_alpha_repaint_is_immediate_and_cheap(registry, viewer):
+    import time
+
+    from lobemap.viewer.app import build_scene
+
+    s = build_scene(viewer, registry, "JRCFIB2018F")[0]["neuprint_hemibrain"]
+    s.compact_delay_ms = 250  # debounce, so refresh() must not compact
+    ts = []
+    for i in range(10):
+        t0 = time.perf_counter()
+        s.set_visible(i, False)
+        ts.append((time.perf_counter() - t0) * 1000)
+    median = float(np.median(ts))
+    assert median < 100.0, f"toggle took {median:.1f} ms"
+    # Hidden compartments are alpha 0 in the colormap.
+    assert float(s.layer.colormap.colors[0][3]) == 0.0
+    assert float(s.layer.colormap.colors[20][3]) == 1.0
