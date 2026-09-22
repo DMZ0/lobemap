@@ -1,13 +1,19 @@
-.DS_Store
 __pycache__/
 *.py[cod]
 .venv/
-.mypy_cache/
-.pytest_cache/
-.ruff_cache/
-napari.log
-datasets/bates-schlegel-2020/slices/
-datasets/benton-2025/data/source/*.pdf
-datasets/comparative-atlases/data/source/*.pdf
-datasets/grabe-2015/data/source/Grabe et al. - *.pdf
-datasets/laissue-1999/data/source/*.pdf
+*.egg-info/
+build/
+dist/
+.DS_Store
+
+# local caches of bridged/derived geometry and downloaded transforms
+cache/
+data/cache/
+
+# Ingested assets are rebuildable from source; caches are fetched, not shipped.
+registry/data/*.npz
+# Sidecar arrays for legacy npz volumes too large to compress (tens of GB).
+registry/data/*.npy
+# OME-Zarr stores are directories, and are rebuildable like everything here.
+registry/data/*.zarr/
+registry/data/.stainwork/
