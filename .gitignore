@@ -11,11 +11,11 @@ cache/
 data/cache/
 
 # Built assets. Everything under registry/data is derived, but the rule is
-# split by SIZE rather than by provenance: the twelve small ones total 47 MB
+# split by SIZE rather than by provenance: the eleven small ones total 76 MB
 # and are tracked, so a clone can open every scene without building anything
-# first. Only the three virtual stains are excluded, and they are 2.32 GB --
-# 98.5% of the total -- regenerated often enough that each rebuild would add
-# another permanent copy to a history that cannot delta-compress them.
+# first. Only the three virtual stains are excluded, and they are 2.4 GB in
+# 24,364 chunk files -- 97% of the total, and more than a repository should
+# carry or a reviewer should have to pull.
 #
 # Named individually rather than by pattern: a `*.zarr/` rule with negations
 # for the exceptions is easy to get subtly wrong, and getting it wrong here
@@ -30,3 +30,5 @@ registry/data/*.data.npy
 registry/data/.stainwork/
 registry/data/.build/
 registry/data/.manifest/
+# Upload-ready archives from `lobemap pack`: a second copy of the data.
+registry/data/.pack/

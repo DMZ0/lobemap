@@ -417,7 +417,7 @@ geometrically the way the others were. Left as-is and flagged.
 Measured: the flybrains bundles are 10.3 GB, the stains 2.4 GB. So the wheel
 carries only registry metadata and everything with voxels or vertices is
 fetched once, after which scenes open offline. `lobemap manifest` records
-sha256 and size for all 16 artifacts (2.53 GB transferred); `lobemap fetch`
+sha256 and size for all 14 artifacts (2.51 GB transferred); `lobemap fetch`
 downloads and verifies, and `--check` verifies what is already present.
 
 A `.zarr` store is a directory, so it travels as a zip and **the checksum is
@@ -429,6 +429,16 @@ artifact does not block the others.
 `base_url` is deliberately unset in the committed manifest: nothing is
 published yet, and a plausible URL that 404s would fail later and less
 clearly than no URL at all.
+
+Producing the bytes to publish needed its own command. `manifest` and
+`fetch --check` both zip a store in order to hash it and then delete the
+archive -- correct for checking, useless for publishing, since the exact
+bytes a downloader receives were being made and thrown away. `lobemap pack`
+writes them instead, named as `fetch` will request them, and re-hashes each
+one against the manifest: a file that does not match is a stale manifest,
+and uploading it would hand every downloader a checksum failure on data
+that is fine. Verified on `hemibrain_stain`, whose archive re-hashes to the
+value recorded at build time.
 
 ### Smoothing a label volume: three constraints, kept independent
 

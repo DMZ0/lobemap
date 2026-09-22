@@ -131,6 +131,111 @@ def cmd_fetch(args) -> int:
     return 1 if failed else 0
 
 
+def cmd_pack(args) -> int:
+    """Write the transfer files to a directory, ready to upload.
+
+    `manifest` and `fetch --check` both zip a Zarr store in order to hash
+    it and then delete the archive. That is right for checking and useless
+    for publishing: the exact bytes a downloader will receive get produced
+    and thrown away, leaving nothing to upload. This writes the same
+    archives and keeps them, under the exact names `fetch` will ask for --
+    `<asset>.zarr.zip` for a store, the file itself otherwise -- so the
+    output directory maps one-to-one onto a set of release assets.
+
+    Everything written is hashed and compared to the manifest, because the
+    manifest is what `fetch` verifies against. Publishing a file that does
+    not match it hands every downloader a checksum failure on data that is
+    perfectly good, so a mismatch fails here instead.
+    """
+    import shutil
+
+    from .core import manifest as mf
+
+    root = _registry_root(args)
+    data_root = _data_root(args, root)
+    path = Path(args.manifest) if args.manifest else root / "manifest.toml"
+    if not path.exists():
+        print(f"no manifest at {path}; run `lobemap manifest` first",
+              file=sys.stderr)
+        return 2
+    arts, base_url = mf.load(path)
+    by_asset = {a.asset: a for a in arts}
+
+    if args.all:
+        wanted = list(arts)
+    elif args.asset:
+        unknown = [a for a in args.asset if a not in by_asset]
+        if unknown:
+            print(f"not in the manifest: {', '.join(unknown)}", file=sys.stderr)
+            print(f"known: {', '.join(sorted(by_asset))}", file=sys.stderr)
+            return 2
+        wanted = [by_asset[a] for a in args.asset]
+    else:
+        print(f"name the assets to pack, or --all. In {path.name}:")
+        wid = max((len(a.asset) for a in arts), default=0)
+        for a in arts:
+            here = "" if (data_root / a.path).exists() else "   (not on disk)"
+            print(f"  {a.asset:{wid}s}  {a.transfer_name:32s} "
+                  f"{a.size / 1e6:9.1f} MB{here}")
+        return 0
+
+    out_dir = Path(args.output) if args.output else data_root / ".pack"
+    out_dir.mkdir(parents=True, exist_ok=True)
+    total = sum(a.size for a in wanted)
+    wid = max(len(a.asset) for a in wanted)
+    print(f"packing {len(wanted)} artifact(s), {total / 1e9:.2f} GB "
+          f"-> {out_dir}")
+
+    failures: list[str] = []
+    written: list[Path] = []
+    for i, art in enumerate(wanted, start=1):
+        source = data_root / art.path
+        target = out_dir / art.transfer_name
+        label = f"  [{i}/{len(wanted)}] {art.asset:{wid}s}"
+        if not source.exists():
+            print(f"{label} MISSING   {art.path} is not on disk")
+            failures.append(art.asset)
+            continue
+        if target.exists() and not args.overwrite:
+            digest, size = mf.sha256_file(target)
+            state = "kept" if digest == art.sha256 else "STALE"
+        else:
+            # Deterministic: sorted entries and pinned timestamps, so the
+            # archive re-hashes to the value `manifest` recorded.
+            if art.kind == "dir":
+                mf.zip_directory(source, target)
+            else:
+                shutil.copyfile(source, target)
+            digest, size = mf.sha256_file(target)
+            state = "ok" if digest == art.sha256 else "MISMATCH"
+        print(f"{label}  {state:9s} {art.transfer_name:32s} "
+              f"{size / 1e6:9.1f} MB", flush=True)
+        if state in ("MISMATCH", "STALE"):
+            print(f"      sha256 {digest[:12]} != manifest {art.sha256[:12]}")
+            failures.append(art.asset)
+        else:
+            written.append(target)
+
+    if failures:
+        print()
+        print(f"{len(failures)} artifact(s) do not match the manifest: "
+              f"{', '.join(failures)}", file=sys.stderr)
+        print("The manifest is what `fetch` verifies against, so publishing "
+              "these would fail for everyone who downloads them. Re-record "
+              "it with `lobemap manifest`, then pack again.", file=sys.stderr)
+        return 1
+
+    print()
+    print(f"{len(written)} file(s) ready in {out_dir}")
+    print("Upload them under these exact names -- `fetch` requests "
+          "<base_url>/<name> -- then record where they went:")
+    print("  lobemap manifest --base-url "
+          "https://github.com/<owner>/<repo>/releases/download/<tag>")
+    if base_url:
+        print(f"  (the manifest currently records {base_url})")
+    return 0
+
+
 def cmd_ingest_neuprint(args) -> int:
     from .core.registry import Registry
     from .ingest import neuprint_rois
@@ -919,6 +1024,19 @@ def main(argv: list[str] | None = None) -> int:
     ft.add_argument("--check", action="store_true",
                     help="verify what is present and exit; download nothing")
     ft.set_defaults(func=cmd_fetch)
+
+    pk = sub.add_parser("pack",
+                        help="write upload-ready copies of the data artifacts")
+    pk.add_argument("asset", nargs="*",
+                    help="asset ids; omit to list what is available")
+    pk.add_argument("--all", action="store_true",
+                    help="pack every artifact in the manifest")
+    pk.add_argument("--manifest", default=None)
+    pk.add_argument("--output", default=None,
+                    help="where to write them (default: <data root>/.pack)")
+    pk.add_argument("--overwrite", action="store_true",
+                    help="re-create files that are already there")
+    pk.set_defaults(func=cmd_pack)
 
     bd = sub.add_parser("build", help="derive built assets from their sources")
     bd.add_argument("asset", nargs="*", help="asset ids; omit with --all")
