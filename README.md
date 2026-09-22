@@ -75,8 +75,8 @@ and their colours.
 
 The atlas and neuropil meshes ship with the repository — about 72 MB, so a
 fresh clone opens every scene. The three virtual stains do not: they are
-2.3 GB, and each is regenerated often enough that committing them would add
-a permanent copy to the history every time.
+2.4 GB across 24,364 chunk files, which is more than a git repository should
+carry and more than a reviewer should have to pull.
 
 Build them when you want them:
 
