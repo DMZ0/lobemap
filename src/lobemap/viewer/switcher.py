@@ -18,6 +18,7 @@ from qtpy.QtWidgets import (
     QComboBox,
     QHBoxLayout,
     QLabel,
+    QSizePolicy,
     QVBoxLayout,
     QWidget,
 )
@@ -58,9 +59,11 @@ class SpaceSwitcher(QWidget):
         row.addWidget(QLabel("Space:"))
         row.addWidget(self.combo, 1)
         outer = QVBoxLayout(self)
+        outer.setContentsMargins(6, 4, 6, 4)
         outer.addLayout(row)
         outer.addWidget(self.status)
-        outer.addStretch(1)
+        # No trailing stretch: it made the widget claim any height it was
+        # given, which is the opposite of what is wanted here.
 
     @staticmethod
     def loadable_spaces(registry) -> list[str]:
@@ -104,6 +107,28 @@ class SpaceSwitcher(QWidget):
             from qtpy.QtCore import Qt
 
             window.splitDockWidget(panel, self.dock, Qt.Vertical)
+            # And give it as little of the column as it will take. This is a
+            # one-line control; the compartment table beside it is the thing
+            # worth the height. Qt distributes by RATIO, not pixels, so the
+            # numbers only have to be lopsided -- and it will still respect
+            # the widget's minimum, which is why `collapse` shrinks that too.
+            self.collapse()
+
+    def collapse(self) -> None:
+        """Shrink to the height this widget actually needs."""
+        window = getattr(self.viewer.window, "_qt_window", None)
+        panel = getattr(self.session, "dock", None)
+        if window is None or panel is None or self.dock is None:
+            return
+        with contextlib.suppress(Exception):
+            from qtpy.QtCore import Qt
+
+            self.dock.setSizePolicy(self.dock.sizePolicy().horizontalPolicy(),
+                                    QSizePolicy.Policy.Minimum)
+            wanted = max(self.dock.sizeHint().height(),
+                         self.dock.minimumSizeHint().height())
+            window.resizeDocks([panel, self.dock], [10_000, wanted],
+                               Qt.Vertical)
 
     def _on_change(self, _index: int) -> None:
         want = self.combo.currentData()

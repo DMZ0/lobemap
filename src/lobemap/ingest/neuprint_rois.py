@@ -32,8 +32,28 @@ NEUROPIL_RE = re.compile(r"^AL\((?P<side>[LR])\)$")
 #: bilateral atlas, but one glomerulus is one glomerulus.
 COMPARTMENT_EXTENT_UM = {
     "glomeruli": (4.0, 45.0),
-    "neuropil": (25.0, 150.0),
+    # The neuropil role now covers every brain neuropil, not just the two
+    # antennal lobes, so the ceiling has to admit the optic lobes.
+    #
+    # The FLOOR must stay well above 11 um, and that is not cosmetic: the
+    # check is on the MEDIAN extent, and these ROIs arrive in 8 nm voxels
+    # whose median reads 11,242. Dropping the floor to 10 made both readings
+    # plausible -- nm gives 11.2 um, px8nm gives 89.9 -- and the ingest
+    # refused as ambiguous rather than silently picking one. 25 rejects the
+    # nm reading outright.
+    "neuropil": (25.0, 400.0),
 }
+
+#: Subtrees of the ROI hierarchy that are not brain. The male CNS covers the
+#: whole central nervous system, so its primary ROIs include the ventral
+#: nerve cord and the cervical connective; the hemibrain has neither and is
+#: unaffected.
+NON_BRAIN_SUBTREES = ("VNC", "CV")
+
+#: Catch-all ROIs for "in this region but not in any named neuropil". They
+#: are primary, so they come back with the rest, but they have no mesh and
+#: are not structures -- the male CNS has three.
+UNSPECIFIED_SUFFIX = "-unspecified"
 
 
 @dataclass
@@ -106,6 +126,46 @@ def fetch_rois(server: str, dataset: str, token: str | None = None):
     return client, sorted(fetch_all_rois(client=client))
 
 
+def brain_neuropils(client) -> list[str]:
+    """Every PRIMARY brain ROI in a dataset, which is its neuropil set.
+
+    "Primary" is neuPrint's own term for the standard non-overlapping
+    parcellation: the hemibrain marks 63 and the male CNS 144. The
+    alternative, taking every ROI, gives 231 and 5,619 respectively and is
+    full of sub-compartments and composites like `CRE(-ROB,-RUB)(R)` that
+    overlap each other.
+
+    The male CNS set is then cut to the brain. Its hierarchy divides into
+    CentralBrain, Optic(L), Optic(R), VNC and CV, and the last two are not
+    brain; the hemibrain has no such branches, so nothing is removed there.
+    """
+    import json
+
+    from neuprint import fetch_roi_hierarchy
+
+    meta = client.fetch_custom("MATCH (m:Meta) RETURN m.primaryRois AS p")
+    raw = meta["p"][0]
+    primary = set(json.loads(raw) if isinstance(raw, str) else (raw or []))
+
+    text = fetch_roi_hierarchy(include_subprimary=False, mark_primary=False,
+                               format="text", client=client)
+    excluded: set[str] = set()
+    depth_of_branch = None
+    for line in text.splitlines():
+        stripped = line.lstrip(" |+-")
+        depth = len(line) - len(stripped)
+        if depth_of_branch is not None and depth > depth_of_branch:
+            excluded.add(stripped.rstrip("*"))
+            continue
+        depth_of_branch = None
+        if stripped.rstrip("*") in NON_BRAIN_SUBTREES:
+            depth_of_branch = depth
+    return sorted(
+        r for r in primary - excluded
+        if UNSPECIFIED_SUFFIX not in r
+    )
+
+
 def ingest(
     server: str = "neuprint.janelia.org",
     dataset: str = "hemibrain:v1.2.1",
@@ -116,8 +176,12 @@ def ingest(
     """Fetch AL ROI meshes and return a MeshSet in micrometres."""
     client, rois = fetch_rois(server, dataset, token)
 
-    pattern = GLOM_RE if role == "glomeruli" else NEUROPIL_RE
-    wanted = [r for r in rois if pattern.match(r)]
+    if role == "glomeruli":
+        wanted = [r for r in rois if GLOM_RE.match(r)]
+    else:
+        # Every brain neuropil, for parity with the FAFB asset, which holds
+        # all 78 that FlyWire serves rather than the antennal lobes alone.
+        wanted = [r for r in brain_neuropils(client) if r in set(rois)]
     if not wanted:
         raise ValueError(
             f"no {role} ROIs matched in {dataset!r}. For male CNS make sure the "

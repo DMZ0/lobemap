@@ -564,6 +564,9 @@ def install_display_mode(viewer, surfaces, contours, images=(),
             return
         show = surf_layers if three_d else cont_layers
         hide = cont_layers if three_d else surf_layers
+        # The wrong-mode layers go off, unconditionally and every time.
+        # Whatever the user did to them since the last switch, a mesh cannot
+        # be read in 2D and a contour cannot be read in 3D.
         for layer in hide:
             if layer in viewer.layers:
                 was_visible[id(layer)] = layer.visible
@@ -806,6 +809,7 @@ def load_space(
     session.handlers = install_display_mode(
         viewer, surfaces, contours, session.images
     ) or []
+    enforce_display_mode = session.handlers[0][1] if session.handlers else None
 
     if scene is None:
         scene = registry.spaces[space].default_scene
@@ -814,6 +818,12 @@ def load_space(
         apply_scene(registry, scene, surfaces, contours, session.images)
     if show:
         _show_layers(viewer, show)
+
+    # AFTER the preset and --show, both of which set visibility without
+    # knowing the display mode: a preset naming an atlas would otherwise
+    # turn its mesh on while the viewer is in 2D, where it cannot be read.
+    if enforce_display_mode is not None:
+        enforce_display_mode()
 
     orient_anterior(viewer, registry.spaces[space])
     if fit:

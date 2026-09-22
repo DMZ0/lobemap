@@ -95,11 +95,18 @@ def test_glomeruli_sit_inside_their_neuropil(registry):
     AL neuropil bounding box for its own side."""
     glom = registry.mesh("neuprint_hemibrain_glomeruli")
     npil = registry.mesh("neuprint_hemibrain_neuropil")
+    # By NAME, not by position. This kept whichever compartment came last
+    # for each side, which was the AL only while the neuropil asset held
+    # nothing else; it now holds all 63 brain neuropils, so the box became
+    # some unrelated region and every glomerulus fell outside it. The same
+    # mistake was fixed in `check_containment` earlier for the same reason.
     boxes = {}
     for i, name in enumerate(npil.names):
+        if not name.startswith("AL("):
+            continue
         v, _ = npil.compartment(i)
-        side = "L" if "(L)" in name else "R"
-        boxes[side] = (v.min(0), v.max(0))
+        boxes["L" if "(L)" in name else "R"] = (v.min(0), v.max(0))
+    assert set(boxes) == {"L", "R"}, f"no AL(L)/AL(R) in {npil.names[:5]}..."
 
     misses = []
     for i, name in enumerate(glom.names):

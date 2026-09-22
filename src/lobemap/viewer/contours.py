@@ -72,6 +72,19 @@ class ContourOverlay:
         )
         self.layer.metadata["lobemap"] = {"kind": "contours", "atlas": name}
 
+        # Redraw when the layer is switched on. `refresh` returns early while
+        # hidden -- it would otherwise recompute intersections for every
+        # atlas on every slider step, visible or not -- so a layer ticked on
+        # stayed EMPTY until the slider next moved. Ticking on a contour
+        # layer is exactly how you show a second atlas in 2D, so this read as
+        # contours randomly missing from the slice you were looking at, and
+        # only in the hemibrain, the one space with more than one atlas.
+        self.layer.events.visible.connect(self._on_visible)
+
+    def _on_visible(self, event=None) -> None:
+        if self.layer.visible:
+            self.refresh()
+
     # -- geometry --------------------------------------------------------
 
     @property
