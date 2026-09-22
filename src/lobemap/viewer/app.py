@@ -143,7 +143,9 @@ def build_scene(
         if layer.metadata.get("lobemap", {}).get("kind") == "labels":
             match_label_colors(layer, list(surfaces.values()))
 
-    contours = _add_contours(viewer, registry, surfaces)
+    contours = (
+        _add_contours(viewer, registry, surfaces) if USE_SLICE_CONTOURS else {}
+    )
 
     # Anatomical names for the dimension sliders and napari's own axis
     # overlay. No layer of our own: see `viewer/axes.py`.
@@ -475,6 +477,25 @@ def _add_images(viewer, registry: Registry, space: str) -> list:
 #: while in 2D.
 DETACH_UNUSABLE_LAYERS = False
 
+#: Whether 2D gets its own exact mesh-plane contour layers, or just shows
+#: the Surface layers sliced by napari.
+#:
+#: Contours exist because nested semi-transparent surfaces stop being
+#: readable past two atlases, and because napari's Surface returns no value
+#: under the cursor in 2D, so they are also what makes a sliced glomerulus
+#: clickable and what carries the per-glomerulus slice labels.
+#:
+#: On. The alternative -- just showing the Surface layers in 2D -- was tried
+#: and does not work: napari slices a Surface by drawing the triangles that
+#: straddle the plane, so you get a shell of wandering thickness, wide where
+#: the surface runs tangent to the slice and absent where it runs
+#: perpendicular, rather than a cross-section. A boundary mesh has no
+#: interior, so nothing can fill it.
+#:
+#: The contours are the exact mesh-plane intersection, are closed loops, and
+#: are drawn FILLED, which is the cross-section of the solid.
+USE_SLICE_CONTOURS = True
+
 
 def install_display_mode(viewer, surfaces, contours, images=(),
                          detach: bool | None = None) -> list[tuple]:
@@ -523,6 +544,10 @@ def install_display_mode(viewer, surfaces, contours, images=(),
             if "level_3d" not in info:
                 continue            # labels carry no pyramid to pin
             layer.locked_data_level = info["level_3d"] if three_d else None
+        if not cont_layers:
+            # Nothing to swap to: the meshes are what 2D shows as well, so
+            # the layer list stays put and only `dims.order` changes.
+            return
         show = surf_layers if three_d else cont_layers
         hide = cont_layers if three_d else surf_layers
         for layer in hide:
@@ -604,6 +629,11 @@ def _add_contours(viewer, registry, surfaces) -> dict[str, ContourOverlay]:
             color=REFERENCE_CONTOUR_COLOR if reference else next(palette),
             width=REFERENCE_CONTOUR_WIDTH if reference else 0.35,
             selection=set(surface.selection),
+            # The filled cross-section takes the colour of its own mesh, so
+            # a glomerulus is the same colour in 2D as in 3D. Reference
+            # shells keep the single grey and are left unfilled.
+            colors=None if reference else surface.colors,
+            fill_opacity=0.0 if reference else 0.85,
         )
     # The overlays carry their own event handlers, so a scene switch can
     # disconnect them without build_scene having to hand them back.

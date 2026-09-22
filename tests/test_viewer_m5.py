@@ -159,3 +159,60 @@ def test_apply_scene_restricts_compartments(registry, viewer):
     assert names and all("DA1" in n.upper() for n in names)
     # A layer absent from the preset is hidden.
     assert not surfaces["neuprint_hemibrain_neuropil"].layer.visible
+
+
+def test_contours_are_filled_cross_sections(registry):
+    """Outlines were not enough, and sliced Surfaces are worse.
+
+    napari slices a Surface by drawing the triangles that straddle the
+    plane, so the result is their projected footprint: wide where the
+    surface runs tangent to the slice, absent where it runs perpendicular.
+    A boundary mesh has no interior, so nothing fills it. These loops are
+    the exact intersection and are closed, so filling them gives the real
+    cross-section.
+    """
+    import numpy as np
+
+    napari = pytest.importorskip("napari")
+    from lobemap.viewer.app import build_scene
+
+    viewer = napari.Viewer(show=False, ndisplay=2)
+    try:
+        from lobemap.viewer.app import install_display_mode
+
+        surfaces, contours = build_scene(viewer, registry, "GRABE")
+        # Through the display-mode hook, so the slider sits on the axis the
+        # app actually slices in 2D. Without it `dims.order` is the identity,
+        # the overlay slices x instead of z, and a mid-plane crosses five
+        # glomeruli rather than forty-odd.
+        images = [
+            layer for layer in viewer.layers
+            if layer.metadata.get("lobemap", {}).get("kind")
+            in ("image", "labels")
+        ]
+        install_display_mode(viewer, surfaces, contours, images)
+        overlay = contours["grabe2015"]
+        overlay.layer.visible = True
+        axis = overlay.axis
+        mid = float(np.percentile(overlay.meshset.vertices[:, axis], 50))
+        viewer.dims.set_point(axis, mid)
+        overlay.refresh()
+
+        assert len(overlay.layer.data) > 10, "no cross-sections on a mid slice"
+        assert set(overlay.layer.shape_type) == {"polygon"}, (
+            "paths draw an outline; only a polygon fills"
+        )
+        faces = np.asarray(overlay.layer.face_color)
+        assert (faces[:, 3] > 0).all(), "a transparent fill is not a fill"
+
+        # The fill must be the colour of that glomerulus's own mesh, or 2D
+        # and 3D disagree about what they are showing.
+        palette = surfaces["grabe2015"].colors
+        for shape, owner in enumerate(overlay._shape_index):
+            np.testing.assert_allclose(
+                faces[shape][:3], palette[owner][:3], atol=1e-2,
+                err_msg=f"fill of {overlay.meshset.names[owner]} differs "
+                        f"from its mesh",
+            )
+    finally:
+        viewer.close()

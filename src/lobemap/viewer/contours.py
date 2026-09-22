@@ -34,6 +34,8 @@ class ContourOverlay:
         selection: set[int] | None = None,
         axis: int | None = None,
         width: float = 0.35,
+        colors=None,
+        fill_opacity: float = 0.85,
     ) -> None:
         self.viewer = viewer
         self.meshset = meshset
@@ -43,6 +45,11 @@ class ContourOverlay:
         #: or three times over, so labels are opt-in per glomerulus.
         self.labels: set[int] = set()
         self.color = color
+        #: Per-compartment RGBA, taken from the Surface layer so a filled
+        #: cross-section is the same colour as its mesh. None falls back to
+        #: the single per-atlas `color`.
+        self.colors = None if colors is None else np.asarray(colors, float)
+        self.fill_opacity = fill_opacity
         self._axis = axis
         self.width = width
         self.selection = set(
@@ -54,7 +61,7 @@ class ContourOverlay:
         self.layer = viewer.add_shapes(
             data=[],
             name=f"{name} [contours]",
-            shape_type="path",
+            shape_type="polygon",
             edge_color=color,
             edge_width=width,
             face_color="transparent",
@@ -131,6 +138,33 @@ class ContourOverlay:
                 owners.append(index)
         return paths, owners
 
+    def _rgba(self, index: int):
+        if self.colors is None or not (0 <= index < len(self.colors)):
+            return None
+        return self.colors[index]
+
+    def _face_colors(self, owners):
+        """One fill per shape, matching the mesh of the same compartment."""
+        out = []
+        for index in owners:
+            rgba = self._rgba(index)
+            if rgba is None:
+                out.append(self.color)
+            else:
+                rgba = np.array(rgba, dtype=float)
+                rgba[3] = self.fill_opacity
+                out.append(rgba)
+        return out
+
+    def _edge_colors(self, owners):
+        """A full-opacity outline of the same hue, so touching neighbours
+        stay separable where their fills meet."""
+        out = []
+        for index in owners:
+            rgba = self._rgba(index)
+            out.append(self.color if rgba is None else np.array(rgba, float))
+        return out
+
     # -- updates ---------------------------------------------------------
 
     def refresh(self) -> None:
@@ -147,11 +181,21 @@ class ContourOverlay:
         # on the second switch back into 2D.
         self.layer.data = []
         if paths:
+            # POLYGONS, not paths. A Surface sliced by napari is the set of
+            # triangles straddling the plane, so what you see is their
+            # projected footprint: wide where the surface runs tangent to the
+            # slice, vanishing where it runs perpendicular. That reads as a
+            # shell of wandering thickness rather than a cross-section.
+            #
+            # These loops are the exact mesh-plane intersection and are
+            # closed -- 45/45 on a mid-AL slice of Grabe -- so filling them
+            # gives the actual cross-section of the solid.
             self.layer.add(
                 paths,
-                shape_type="path",
-                edge_color=self.color,
+                shape_type="polygon",
+                edge_color=self._edge_colors(owners),
                 edge_width=self.width,
+                face_color=self._face_colors(owners),
             )
         # Text after data: napari requires one string per shape, so setting it
         # first would leave the counts disagreeing.
