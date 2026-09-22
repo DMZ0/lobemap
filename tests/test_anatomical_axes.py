@@ -101,12 +101,17 @@ def test_lateral_points_at_the_biological_right_in_fafb(registry):
     # FlyWire ("AL_L") and from the male CNS ("AL(L)"), and the test is
     # about laterality, not spelling.
     def al_for(side: str) -> str:
-        """The whole-AL shell for one side, whatever the naming style."""
+        """The whole-AL shell for one side, whatever the naming style.
+
+        FlyWire writes `AL_L`, neuPrint writes `AL(L)`. Matching the stem
+        and the side separately covers both; an earlier version partitioned
+        on "(" alone, which silently matched neither for `AL_L`.
+        """
         for name in meshset.names:
-            stem, _, _ = name.partition("(")
-            if stem.rstrip("_") == "AL" and name.rstrip(")").endswith(side):
+            m = re.fullmatch(r"(?P<stem>.+?)[_(](?P<side>[LR])\)?", name)
+            if m and m["stem"] == "AL" and m["side"] == side:
                 return name
-        raise AssertionError(f"no AL({side}) in {meshset.names[:6]}...")
+        raise AssertionError(f"no AL for side {side} in {meshset.names[:6]}...")
 
     for side in ("L", "R"):
         verts, _faces = meshset.compartment(meshset.names.index(al_for(side)))

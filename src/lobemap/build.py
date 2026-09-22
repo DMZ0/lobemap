@@ -204,25 +204,6 @@ def _neuprint(src, params, **_):
     ).meshset
 
 
-@pipeline("bridged_meshset")
-def _bridged(src, params, registry=None, progress=None, **_):
-    """Another asset's meshes, warped into this asset's space.
-
-    Ingest-time bridging: the result is stored in the space the registry
-    declares for it, so nothing downstream has to know it came from
-    elsewhere. This is not the display-time bridging that was removed -- an
-    atlas still belongs to exactly one space.
-    """
-    from .core.resolve import resolve
-
-    if progress:
-        progress(f"bridging {params['from']} -> {params['space']}")
-    return resolve(
-        registry, params["from"], params["space"],
-        align_biology=params.get("align_biology", False),
-    )
-
-
 @pipeline("flywire_neuropils")
 def _flywire(src, params, progress=None, **_):
     from .ingest.flywire_neuropils import bridge_to_fafb14, ingest
@@ -332,7 +313,7 @@ def build_asset(registry, asset_id: str, recipes=None, progress=None,
     src = resolve_source(recipe, repo_root, cache, progress=progress)
     if progress:
         progress(f"{asset_id}: {recipe.pipeline}")
-    obj = fn(src, recipe.params, progress=progress, registry=registry,
+    obj = fn(src, recipe.params, progress=progress,
              workdir=registry.data_root / ".stainwork")
 
     target.parent.mkdir(parents=True, exist_ok=True)

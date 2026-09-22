@@ -104,29 +104,15 @@ server = "neuprint-cns.janelia.org"
 dataset = "male-cns:v1.0"
 role = "neuropil"
 
-# -- FAFB neuropils -------------------------------------------------------
-# Warped from the male CNS rather than taken from FlyWire. The FlyWire
-# volumes are heavily decimated -- 394 vertices and 7.1 um facets at the
-# median, against 6,459 and 1.97 um here -- so a neuropil read as a faceted
-# polyhedron rather than a surface.
-#
-# align_biology matters and is not cosmetic. FAFB's image data is left-right
-# inverted and the male CNS's is not, and the bridge preserves APPARENT
-# side, so without a mirror the male CNS AL(L) lands 6.2 um from FlyWire's
-# AL_R -- the wrong lobe, and near enough to the right one's neighbour to
-# look plausible. With it, AL(L) lands 6.4 um from AL_L and AL(R) 9.0 um
-# from AL_R, which is the registration error expected of a warp between
-# different specimens of different sex.
-#
-# Naming follows the source, so this asset now says AL(L) where the FlyWire
-# one said AL_L. That matches the other two neuropil assets.
+# -- FlyWire neuropils ----------------------------------------------------
+# Needs FLYWIRE_APPLICATION_CREDENTIALS. Served in FLYWIRE space and bridged
+# to FAFB14 as part of the build, because the registry declares the asset in
+# FAFB14 and an unbridged mesh would land in the wrong place.
 
 [fafb_neuropil]
-pipeline = "bridged_meshset"
+pipeline = "flywire_neuropils"
 [fafb_neuropil.params]
-from = "neuprint_cns_neuropil"
-space = "FAFB14"
-align_biology = true
+bridge_to = "FAFB14"
 
 
 # -- Virtual neuropil stains ----------------------------------------------
