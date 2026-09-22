@@ -13,8 +13,9 @@ import pytest
 from lobemap.build import buildable, load_recipes, missing
 from lobemap.core.registry import Registry
 
-#: Built by `lobemap stain` instead: ~19 GB of downloads, ~40 GB of scratch
-#: and hours of compute make them a deliberate act, not a recipe.
+#: Buildable like everything else, but flagged `expensive`: ~19 GB of
+#: downloads, ~40 GB of scratch and hours of compute, so `--all` skips them
+#: and they have to be named.
 STAINS = {"fafb_stain", "hemibrain_stain", "malecns_stain"}
 
 
@@ -23,9 +24,9 @@ def registry():
     return Registry.load("registry", validate=False)
 
 
-def test_every_asset_is_either_buildable_or_a_stain(registry):
+def test_every_asset_is_buildable(registry):
     recipes = load_recipes(registry.root)
-    orphans = [a for a in registry.assets if a not in recipes and a not in STAINS]
+    orphans = [a for a in registry.assets if a not in recipes]
     assert not orphans, (
         f"no way to rebuild: {orphans}. Add a recipe to registry/recipes.toml "
         f"or the asset cannot be reproduced by anyone."
@@ -62,16 +63,30 @@ def test_every_recipe_names_a_known_pipeline(registry):
         )
 
 
-def test_buildable_excludes_the_stains(registry):
-    assert STAINS.isdisjoint(buildable(registry))
+def test_the_stains_are_flagged_expensive(registry):
+    """`--all` must not start ~19 GB of downloads and hours of compute."""
+    recipes = load_recipes(registry.root)
+    for stain in STAINS:
+        assert recipes[stain].expensive, f"{stain} is not flagged expensive"
+    cheap = buildable(registry, recipes, include_expensive=False)
+    assert STAINS.isdisjoint(cheap)
+    # Named explicitly, they are still buildable.
+    assert STAINS <= set(buildable(registry, recipes))
 
 
 def test_missing_reports_what_is_absent(registry):
+    """Whatever is absent must be a declared asset, and be buildable.
+
+    This deliberately does not assert WHICH assets are missing. That depends
+    on what the machine happens to have built -- the stains are gitignored,
+    so they are present here and absent on a fresh clone -- and a test that
+    encodes one of those states fails for the other.
+    """
+    recipes = load_recipes(registry.root)
     absent = set(missing(registry))
     assert absent <= set(registry.assets)
-    # The stains are the ones this repository does not ship.
-    assert absent == STAINS, (
-        f"expected only the stains to be absent, got {sorted(absent)}"
+    assert absent <= set(recipes), (
+        f"absent and unbuildable: {sorted(absent - set(recipes))}"
     )
 
 
@@ -79,9 +94,11 @@ def test_the_no_data_error_names_a_runnable_command(registry):
     """The old message said `lobemap ingest ...`, ellipsis and all."""
     from lobemap.viewer.app import MissingAssets
 
+    # Constructed directly rather than provoked, so the test does not
+    # depend on anything actually being absent: with every asset built the
+    # list is empty, and it is the ADVICE being checked here.
     text = str(MissingAssets("JRCFIB2018F", registry))
     assert "..." not in text, "the advice still contains a literal ellipsis"
     assert "lobemap build --all" in text
     assert "lobemap fetch" in text
-    # It must name the specific assets, not just gesture at the space.
-    assert "hemibrain_stain" in text
+    assert "JRCFIB2018F" in text

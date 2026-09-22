@@ -28,7 +28,12 @@ REFERENCE_CONTOUR_WIDTH = 0.2
 
 
 def _tag(meshset) -> str:
-    """Mark bridged, degraded and mirrored layers in their name."""
+    """Mark bridged, degraded and mirrored layers in their name.
+
+    Only ingest-time bridging reaches this now: an asset transformed into
+    the space it is declared in, such as the FlyWire neuropils bridged
+    FLYWIRE -> FAFB14. The viewer no longer bridges atlases across spaces.
+    """
     params = meshset.meta.get("derivation", {}).get("params", {})
     if not params:
         return ""
@@ -87,13 +92,20 @@ def build_scene(
     viewer,
     registry: Registry,
     space: str,
-    bridged: bool = False,
-    align_biology: bool = False,
 ) -> tuple[dict[str, AtlasSurface], dict[str, ContourOverlay]]:
     """Add every atlas native to `space`, plus that space's reference meshes.
 
-    With `bridged=True`, also bring in atlases whose native space is different
-    -- the thing an atlas-centric design structurally cannot do.
+    An atlas belongs to exactly one space and is only ever shown there. The
+    viewer used to be able to bridge atlases in from other spaces, which made
+    a scene's contents span vocabularies: each space names its glomeruli in
+    its own terms, so a bridged atlas arrived with names the host space does
+    not define, and the panel and the colour palette had to reconcile them
+    through a single global vocabulary. Dropping it is what lets nomenclature
+    be per-space.
+
+    Bridging survives where it is about DATA rather than display -- ingest
+    puts an asset into its declared space, and `lobemap bridge` and
+    `lobemap reconcile` still compare across spaces on the command line.
     """
     if space not in registry.spaces:
         raise KeyError(f"unknown space {space!r}; known: {sorted(registry.spaces)}")
@@ -119,6 +131,7 @@ def build_scene(
 
     _add_images(viewer, registry, space)
 
+    vocabulary = registry.vocabulary(space)
     for atlas in registry.atlases_in_space(space):
         try:
             meshset = registry.mesh(atlas.asset)
@@ -126,12 +139,10 @@ def build_scene(
             continue
         surfaces[atlas.id] = AtlasSurface(
             viewer, meshset, name=atlas.title or atlas.id,
-            colors=canonical_colors(atlas.compartments, registry.names.canonical),
-        )
-
-    if bridged:
-        surfaces.update(
-            _add_bridged(viewer, registry, space, align_biology=align_biology)
+            # The SPACE's vocabulary, not a global one: a glomerulus is
+            # one colour across the atlases it can be compared with, which
+            # is exactly the atlases sharing its space.
+            colors=canonical_colors(atlas.compartments, vocabulary),
         )
 
     if not surfaces:
@@ -585,40 +596,6 @@ def install_display_mode(viewer, surfaces, contours, images=(),
     return [(viewer.dims.events.ndisplay, _apply)]
 
 
-def _add_bridged(
-    viewer, registry: Registry, space: str, align_biology: bool = False
-) -> dict[str, AtlasSurface]:
-    """Bring atlases from other spaces into this one, marked as bridged."""
-    from ..core.resolve import resolve
-
-    out: dict[str, AtlasSurface] = {}
-    if registry.spaces[space].is_island:
-        return out
-    for atlas in registry.atlases.values():
-        if atlas.native_space == space:
-            continue
-        source = registry.spaces.get(atlas.native_space)
-        if source is None or source.is_island:
-            continue
-        try:
-            meshset = resolve(
-                registry, atlas.asset, space, align_biology=align_biology
-            )
-        except Exception as exc:  # noqa: BLE001 - a missing bridge is not fatal
-            print(f"  skipping {atlas.id}: {type(exc).__name__}: {exc}")
-            continue
-        out[atlas.id] = AtlasSurface(
-            viewer,
-            meshset,
-            name=f"{atlas.title or atlas.id}{_tag(meshset)}",
-            opacity=0.6,
-            # A bridged atlas is the case canonical colour exists for: the
-            # point of bringing it in is to compare it against the native one.
-            colors=canonical_colors(atlas.compartments, registry.names.canonical),
-        )
-    return out
-
-
 def _add_contours(viewer, registry, surfaces) -> dict[str, ContourOverlay]:
     """One contour overlay per surface, including the reference geometry."""
     overlays: dict[str, ContourOverlay] = {}
@@ -798,8 +775,6 @@ def load_space(
     registry: Registry,
     space: str,
     scene: str | None = None,
-    bridged: bool = False,
-    align_biology: bool = False,
     show: tuple[str, ...] = (),
     fit: bool = True,
 ) -> SceneSession:
@@ -811,9 +786,7 @@ def load_space(
     running it first lets it overwrite what the preset just set.
     """
     session = SceneSession(viewer, registry, space, scene)
-    surfaces, contours = build_scene(
-        viewer, registry, space, bridged=bridged, align_biology=align_biology
-    )
+    surfaces, contours = build_scene(viewer, registry, space)
     session.surfaces, session.contours = surfaces, contours
 
     from .panel import CompartmentPanel
@@ -852,8 +825,6 @@ def run(
     registry_root,
     space: str | None = None,
     ndisplay: int = 3,
-    bridged: bool = False,
-    align_biology: bool = False,
     scene: str | None = None,
     show: tuple[str, ...] = (),
 ) -> None:
@@ -875,8 +846,6 @@ def run(
         session = load_space(
             viewer, registry, target,
             scene=use_scene,
-            bridged=bridged,
-            align_biology=align_biology,
             show=show,
         )
         viewer.title = f"lobemap - {session.scene or session.space}"

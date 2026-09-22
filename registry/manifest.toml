@@ -5,12 +5,6 @@ version = 1
 # base_url is unset: nothing is published yet. Pass --base-url to
 # `lobemap manifest`, or `--base-url` to `lobemap fetch`.
 
-[artifacts.bates2020_glomeruli]
-path = "bates2020_glomeruli.npz"
-kind = "file"
-sha256 = "8d8b53eb65d122f75740808af609b75b561fac468447cbf42d5a6cc6ae379d2d"
-size = 2857138
-
 [artifacts.benton2025_glomeruli]
 path = "benton2025_glomeruli.npz"
 kind = "file"
@@ -26,8 +20,8 @@ size = 922845
 [artifacts.fafb_stain]
 path = "fafb_stain.zarr"
 kind = "dir"
-sha256 = "88a7bb598a50973d0250cf4aeb349da96618cfc45d0707de3e79324f937e3742"
-size = 913057461
+sha256 = "5ea23a76dd435f07d2781d1cc9d79eaa1ce9c1296433783aa707e4c7d97d1c2a"
+size = 913057435
 
 [artifacts.grabe2015_glomeruli]
 path = "grabe2015_glomeruli.npz"
@@ -50,14 +44,14 @@ size = 15002575
 [artifacts.hemibrain_stain]
 path = "hemibrain_stain.zarr"
 kind = "dir"
-sha256 = "b23abcf844038b14cc37022edfda187c641f9ac36c1c5ca7922f47a45cbe67b3"
-size = 415633974
+sha256 = "eadb2b89d30e3cc00afa3a6ea30ba3305ad4d0e7821b3530ccaa627087c7f910"
+size = 415633948
 
 [artifacts.malecns_stain]
 path = "malecns_stain.zarr"
 kind = "dir"
-sha256 = "c4fc14eff1d74f4e11d2fe6bbac958442374854f7ad05cd679815597e82da9c0"
-size = 1108619268
+sha256 = "e16c54bd1c38d1eab6c404e27fb8324a5ebd7aeed7fd029e07f7a9ed4c8575a4"
+size = 1108619262
 
 [artifacts.neuprint_cns_glomeruli]
 path = "neuprint_cns_glomeruli.npz"

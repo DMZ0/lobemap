@@ -27,7 +27,8 @@ the tests and every data check cannot execute. Last full run with assets
 present: 263 tests, 26/26 checks -- the check count drops by two with the
 JRC2018U nc82 image removed.
 
-Registry: 7 atlases, 5 spaces, 15 assets, 8 scene presets, 58 canonical names
+Registry: 6 atlases, 5 spaces, 14 assets, 5 scene presets; nomenclature is
+per space (58 names in FAFB and the hemibrain, 56 in Grabe)
 (Benton 2025's published names, enforced by `Registry.validate`).
 All three whole-brain virtual stains are built (findings §7).
 
@@ -51,7 +52,6 @@ src/lobemap/
     manifest.py     fetchable artifacts: checksums, verify, download
   ingest/
     neuprint_rois.py   hemibrain / male CNS ROI meshes
-    bates_plotly.py    Bates 2020 Plotly HTML
     slicer_vtm.py      Benton 2025 3D Slicer .vtm/.vtp
     obj_archive.py     Schlegel S11/S12 STL zips (also .obj/.7z)
     label_volume.py    Grabe masks -> marching cubes
@@ -66,15 +66,16 @@ src/lobemap/
     images.py       covers-mesh, brightness-at-mesh, inside-shell
     reconcile.py    geometric name reconciliation with ambiguity test
   viewer/
-    app.py          scene assembly, bridged layers, image layers, picking
+    app.py          scene assembly, image layers, picking
     layers.py       AtlasSurface: alpha repaint + debounced compaction
     contours.py     exact mesh-plane intersections as Shapes (2D)
     panel.py        compartment table joined to nomenclature
   cli.py            view, scenes, validate, spaces, check, reconcile,
                     nomenclature, bridge, repair, stain, tozarr,
-                    manifest, fetch, ingest {neuprint,bates}
+                    manifest, fetch, build, ingest {neuprint}
 registry/
   spaces.toml assets.toml atlases/*.toml scenes.toml nomenclature.csv
+  recipes.toml manifest.toml
   data/           ingested .npz (meshes) and .zarr (volumes),
                   gitignored and rebuildable
 tests/            231 tests, offline except where marked

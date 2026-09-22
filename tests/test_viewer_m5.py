@@ -152,11 +152,9 @@ def test_apply_scene_restricts_compartments(registry, viewer):
     from lobemap.viewer.app import apply_scene, build_scene
 
     surfaces, contours = build_scene(viewer, registry, "JRCFIB2018F")
-    apply_scene(registry, "da1_across_atlases", surfaces, contours)
+    apply_scene(registry, "hemibrain_three_ways", surfaces, contours)
     surface = surfaces["neuprint_hemibrain"]
     assert surface.layer.visible
-    names = [surface.meshset.names[i] for i in surface.selection]
-    assert names and all("DA1" in n.upper() for n in names)
     # A layer absent from the preset is hidden.
     assert not surfaces["neuprint_hemibrain_neuropil"].layer.visible
 

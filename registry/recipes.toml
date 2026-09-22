@@ -9,10 +9,9 @@
 # `source` paths are relative to the repository root. A `url` is downloaded
 # and cached under the data root's `.build/` instead.
 #
-# NOT COVERED HERE: the three virtual stains. They need ~19 GB of synapse
-# downloads, ~40 GB of scratch and hours of compute, so they stay behind
-# `lobemap stain` where invoking them is a deliberate act. See
-# registry/data/README.md for their exact parameters.
+# The three virtual stains ARE covered, at the bottom. They are expensive --
+# ~19 GB of synapse downloads, ~40 GB of scratch and hours of compute -- so
+# `lobemap build --all` skips them and they must be named explicitly.
 
 # -- Grabe 2015 -----------------------------------------------------------
 # Entirely offline: the confocal stack and the Amira label volume both ship
@@ -53,11 +52,7 @@ role = "template_image"
 # Volume.save dispatches on the registry path's suffix.
 
 # -- FAFB atlases ---------------------------------------------------------
-# Also offline; both source files ship in datasets/.
-
-[bates2020_glomeruli]
-pipeline = "bates_plotly"
-source = "datasets/bates-schlegel-2020/data/source/glomeruli_atlas_interactive.html"
+# Offline; the source ships in datasets/.
 
 [benton2025_glomeruli]
 pipeline = "slicer_vtm"
@@ -118,3 +113,67 @@ role = "neuropil"
 pipeline = "flywire_neuropils"
 [fafb_neuropil.params]
 bridge_to = "FAFB14"
+
+
+# -- Virtual neuropil stains ----------------------------------------------
+# Presynapse density at LM resolution: a binned Gaussian KDE over every
+# predicted presynapse in the published bulk release, at 0.25 um bins with
+# sigma 450 nm. All three sources are public and need no credentials.
+#
+# EXPENSIVE, and excluded from `--all` for that reason. At 0.25 um each grid
+# is 2-5 G voxels, far larger than the point cloud, so the build partitions
+# the points into slabs and spills them to `.stainwork`, which needs about
+# 40 GB free.
+#
+# The bounds are passed explicitly rather than derived, so a rebuild
+# reproduces the same physical box: they are the held neuropil geometry plus
+# a 5 um margin. The male CNS bounds also crop the VNC away.
+
+[hemibrain_stain]
+pipeline = "virtual_stain"
+expensive = true
+# Eight shards, fetched into one directory: the loader takes the directory.
+urls = [
+  "https://storage.googleapis.com/neuroglancer-janelia-flyem-hemibrain/v1.2/synapses/by_id/0.shard",
+  "https://storage.googleapis.com/neuroglancer-janelia-flyem-hemibrain/v1.2/synapses/by_id/1.shard",
+  "https://storage.googleapis.com/neuroglancer-janelia-flyem-hemibrain/v1.2/synapses/by_id/2.shard",
+  "https://storage.googleapis.com/neuroglancer-janelia-flyem-hemibrain/v1.2/synapses/by_id/3.shard",
+  "https://storage.googleapis.com/neuroglancer-janelia-flyem-hemibrain/v1.2/synapses/by_id/4.shard",
+  "https://storage.googleapis.com/neuroglancer-janelia-flyem-hemibrain/v1.2/synapses/by_id/5.shard",
+  "https://storage.googleapis.com/neuroglancer-janelia-flyem-hemibrain/v1.2/synapses/by_id/6.shard",
+  "https://storage.googleapis.com/neuroglancer-janelia-flyem-hemibrain/v1.2/synapses/by_id/7.shard",
+]
+into = "hemibrain_shards"
+[hemibrain_stain.params]
+bucket = "hemibrain"
+space = "JRCFIB2018F"
+voxel = 0.25
+sigma = 0.45
+bounds = [0.0, 0.0, 0.0, 275.5, 316.5, 331.5]
+# The shard format carries no confidence field to filter on.
+confidence = false
+
+[fafb_stain]
+pipeline = "virtual_stain"
+expensive = true
+url = "https://storage.googleapis.com/flywire-data/codex/data/fafb/783/fafb_v783_princeton_synapse_table.csv.gz"
+[fafb_stain.params]
+bucket = "fafb"
+space = "FAFB14"
+voxel = 0.25
+sigma = 0.45
+bounds = [192.2, 75.853, 2.007, 853.7, 398.853, 271.507]
+confidence = 0.5
+
+[malecns_stain]
+pipeline = "virtual_stain"
+expensive = true
+url = "https://storage.googleapis.com/flyem-male-cns/v1.0/connectome-data/flat-connectome/syn-points-male-cns-v1.0-minconf-0.5.feather"
+[malecns_stain.params]
+bucket = "malecns"
+space = "JRCFIB2022M"
+voxel = 0.25
+sigma = 0.45
+bounds = [37.6, 37.3, 79.8, 732.1, 421.8, 345.3]
+# The published file is already filtered to minconf 0.5.
+confidence = 0.5

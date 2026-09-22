@@ -47,9 +47,15 @@ def test_no_show_means_no_layers_forced(captured):
 
 
 def test_the_other_flags_still_arrive(captured):
-    call = _view(captured, ["FAFB14", "--ndisplay", "2", "--bridged",
-                            "--align-biology"])
+    call = _view(captured, ["FAFB14", "--ndisplay", "2"])
     assert call["space"] == "FAFB14"
     assert call["ndisplay"] == 2
-    assert call["bridged"] is True
-    assert call["align_biology"] is True
+
+
+def test_cross_space_flags_are_gone(captured):
+    """An atlas belongs to one space and is only ever shown there."""
+    import pytest as _pytest
+
+    for flag in ("--bridged", "--align-biology"):
+        with _pytest.raises(SystemExit):
+            cli.main(["view", "FAFB14", flag])

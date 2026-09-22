@@ -57,7 +57,9 @@ def default_data_root(root: Path) -> Path:
 #: atlas maps onto it. Chosen because Benton 2025 is the current revision and
 #: carries the post-Schlegel-2021 naming; recorded here rather than left
 #: implicit so `validate` can catch the vocabulary drifting away from it.
-CANONICAL_SOURCE_ATLAS = "benton2025"
+#: No single atlas defines the vocabulary any more; see `Registry.vocabulary`.
+#: Retained as documentation of where FAFB's names come from.
+FAFB_NOMENCLATURE_SOURCE = "benton2025"
 
 
 class RegistryError(ValueError):
@@ -256,6 +258,30 @@ class Registry:
 
     # -- validation ------------------------------------------------------
 
+    def vocabulary(self, space_id: str) -> list[str]:
+        """The glomerulus names defined in one space, in a stable order.
+
+        There is no longer a single canonical vocabulary across the registry.
+        An atlas belongs to exactly one space and is only ever shown there,
+        so names only have to agree WITHIN a space -- which is the only
+        place two atlases can be superimposed.
+
+        That is more than tidiness. A single global vocabulary had to pick a
+        winner and restate every other atlas in its terms, which is awkward
+        precisely where the communities disagree: the Schlegel 2021 rename
+        chain (VC3l to VC3, VC3m to VC5, VC5 to VM6) meant the hemibrain
+        atlases were described in FAFB's names. Per space, each uses its own.
+
+        In practice only the hemibrain has several atlases to reconcile.
+        Every other space has one, and its vocabulary is that atlas's names
+        with prefixes and sides stripped.
+        """
+        names: set[str] = set()
+        for atlas in self.atlases_in_space(space_id):
+            for compartment in atlas.compartments:
+                names.update(compartment.canonical)
+        return sorted(names)
+
     def validate(self, strict_templates: bool = False) -> list[str]:
         """Raise on structural errors; return non-fatal warnings.
 
@@ -300,22 +326,13 @@ class Registry:
                         f"atlas {at.id!r}: {c.published_name!r} has no canonical name"
                     )
 
-        source = self.atlases.get(CANONICAL_SOURCE_ATLAS)
-        if source is not None and source.compartments:
-            from .names import normalise, parse_roi
-
-            expected = {normalise(parse_roi(c.published_name)[0]): c.published_name
-                        for c in source.compartments}
-            actual = {normalise(c): c for c in self.names.canonical}
-            for key in sorted(set(actual) - set(expected)):
-                problems.append(
-                    f"canonical name {actual[key]!r} is not a published name of "
-                    f"{CANONICAL_SOURCE_ATLAS!r}, which is the canonical source"
-                )
-            for key in sorted(set(expected) - set(actual)):
+        # No global vocabulary to validate against one atlas. Each space has
+        # its own, derived from the atlases native to it.
+        for space_id in self.spaces:
+            if self.atlases_in_space(space_id) and not self.vocabulary(space_id):
                 warnings.append(
-                    f"{CANONICAL_SOURCE_ATLAS!r} publishes {expected[key]!r} but "
-                    f"no atlas maps onto it"
+                    f"space {space_id!r} has atlases but no glomerulus names; "
+                    f"check nomenclature.csv"
                 )
 
         for s in self.spaces.values():

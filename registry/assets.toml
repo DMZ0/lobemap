@@ -40,30 +40,11 @@ path = "data/neuprint_cns_neuropil.npz"
 [neuprint_cns_neuropil.source]
 url = "https://neuprint-cns.janelia.org"
 
-# side is the BIOLOGICAL side. The Bates masks sit on FAFB's image-right, which
-# in this mirrored space is the fly's LEFT. The paper calls them the right AL,
-# but it predates the discovery that the FAFB image data is left-right
-# inverted, so the structure is biologically left.
-#
-# Measured: bridged into hemibrain space they land on AL(R) -- 56/58 centroids
-# inside, 58 name matches at median 6.3 um. That is consistent, because the
-# bridge preserves apparent side, and hemibrain AL(R) is what FAFB image-right
-# maps onto. Comparing them as the SAME biological side requires an explicit
-# mirror (resolve(..., align_biology=True)).
-[bates2020_glomeruli]
-role = "glomeruli"
-space = "FAFB14"
-kind = "meshset"
-side = "L"
-path = "data/bates2020_glomeruli.npz"
-[bates2020_glomeruli.source]
-doi = "10.1016/j.cub.2020.06.042"
-url = "https://doi.org/10.1016/j.cub.2020.06.042"
-license = "see publisher"
-
-# Benton revises the Bates meshes, so it inherits Bates' laterality: also the
-# fly's LEFT AL. Delivered in 3D Slicer RAS; ingest negates x and y, which puts
-# its centroid cloud 0.0 um from Bates.
+# The fly's LEFT AL. The Bates 2020 masks these revise sat on FAFB's
+# image-right, which in this mirrored space is biologically left; Benton
+# inherits that. Delivered in 3D Slicer RAS, and ingest negates x and y --
+# checked when Bates was still here, which put the two centroid clouds 0.0 um
+# apart.
 [benton2025_glomeruli]
 role = "glomeruli"
 space = "FAFB14"

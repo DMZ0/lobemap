@@ -125,7 +125,7 @@ def test_the_antennal_lobes_lie_anterior_in_fafb():
     reg = Registry.load(REGISTRY)
     brain = reg.mesh("fafb_neuropil").vertices
     mid = (brain.min(0) + brain.max(0)) / 2
-    al = reg.mesh("bates2020_glomeruli").vertices.mean(0)
+    al = reg.mesh("benton2025_glomeruli").vertices.mean(0)
     anterior = axis_vector(reg.spaces["FAFB14"].anterior)
     assert np.dot(al - mid, anterior) > 0, "ALs must be on the anterior side"
 

@@ -3,7 +3,40 @@
 A napari application for viewing and comparing *Drosophila* antennal lobe glomerular
 atlases in their native and bridged coordinate spaces.
 
-Status: design document. No implementation yet.
+Status: design document, implemented. Two decisions below have since been
+revised; see the amendment.
+
+---
+
+## Amendment: one space per atlas, and nomenclature per space
+
+Two things this document argues for are no longer true of the code.
+
+**An atlas is now shown only in its native space.** Section 1 allows atlas
+layers "native to that space, or bridged into it", and the viewer had a
+`--bridged` flag and a cross-space scene. Both are gone. Bridging survives
+where it concerns DATA rather than display: ingest still transforms an asset
+into the space it is declared in (the FlyWire neuropils are bridged
+FLYWIRE to FAFB14), and `lobemap bridge` and `lobemap reconcile` still
+compare across spaces from the command line. The argument in section 1
+against the ATLAS-centric design stands -- scenes are still organised by
+space, and the reference geometry, images and several atlases of one space
+still share a scene.
+
+**Nomenclature is per space, not global.** There is no longer a single
+canonical vocabulary anchored to one atlas. Each space's vocabulary is the
+union of the names its own atlases resolve to, because a space is the only
+place two atlases can be superimposed. A global vocabulary had to nominate
+one atlas as the authority and restate every other in its terms, which is
+awkward exactly where the communities disagree -- the Schlegel 2021 rename
+chain meant the hemibrain atlases were described in FAFB's names. The cost
+is that a glomerulus may take a different colour in different scenes, since
+colour is assigned by position in the space's vocabulary.
+
+In practice only the hemibrain now has several atlases to reconcile. Every
+other space has one, and its vocabulary is that atlas's own names.
+
+The Bates 2020 atlas was also removed: Benton 2025 revises the same meshes.
 
 Lineage: this is a from-scratch successor to [lobemap](https://github.com/gumadeiras/lobemap)
 (Gustavo Madeira Santana). It reuses that project's ideas and some of its curated

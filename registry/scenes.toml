@@ -3,14 +3,6 @@
 # the space-centric one: those viewers are a special case of this, not a
 # different architecture (design.md section 1).
 
-[bates2020]
-title = "Bates 2020 alone (FAFB)"
-space = "FAFB14"
-layers = [
-  { ref = "bates2020" },
-  { ref = "fafb_neuropil", visible = false },
-]
-
 # Each space names one of these as its `default_scene`: a single atlas, so
 # two are not stacked on top of each other at startup, plus that space's
 # reference image behind it.
@@ -62,22 +54,4 @@ layers = [
   { ref = "schlegel2021_s11" },
   { ref = "schlegel2021_s12" },
   { ref = "neuprint_hemibrain_neuropil", visible = false },
-]
-
-[bates_vs_benton]
-title = "Bates vs Benton in FAFB (the VC3l/VC3m/VC5 rename chain)"
-space = "FAFB14"
-layers = [
-  { ref = "bates2020", style = { compartments = ["VC3", "VC5", "VM6"] } },
-  { ref = "benton2025", style = { compartments = ["VC3", "VC5", "VM6"] } },
-]
-
-[da1_across_atlases]
-title = "DA1 in hemibrain space, from every bridgeable atlas"
-space = "JRCFIB2018F"
-layers = [
-  { ref = "neuprint_hemibrain", style = { compartments = ["DA1"] } },
-  { ref = "schlegel2021_s11", style = { compartments = ["DA1"] } },
-  { ref = "bates2020", style = { compartments = ["DA1"] } },
-  { ref = "neuprint_cns", style = { compartments = ["DA1"] } },
 ]

@@ -192,44 +192,6 @@ def cmd_ingest_neuprint(args) -> int:
     return 0
 
 
-def cmd_ingest_bates(args) -> int:
-    from .core.names import Nomenclature
-    from .ingest import bates_plotly
-
-    result = bates_plotly.ingest(args.html, role=args.role, repair=not args.no_repair)
-    ms = result.meshset
-    root = _registry_root(args)
-    out = root / "data" / f"{args.asset_id}.npz"
-    ms.save(out)
-
-    print(f"bates 2020  role={args.role}")
-    print(f"  compartments : {ms.n_compartments}")
-    print(f"  vertices     : {len(ms.vertices):,}  faces: {len(ms.faces):,}")
-    print(f"  source units : {result.source_units} (x{result.scale_to_um:g} -> um)")
-    print(f"  extent (um)  : {ms.extent_um().round(1)}")
-    if result.repair is not None:
-        print(f"  watertight   : {result.repair.summary()}")
-        for name, pct in sorted(
-            result.repair.large_changes.items(), key=lambda kv: -abs(kv[1])
-        )[:5]:
-            print(f"    !! {name} volume changed {pct:+.1f}% during repair")
-    if result.skipped:
-        print(f"  skipped      : {len(result.skipped)}")
-    print(f"  written      : {out}")
-
-    if args.atlas_id and args.role == "glomeruli":
-        nom_path = root / "nomenclature.csv"
-        nom = Nomenclature.load(nom_path)
-        existing = {c.published_name for c in nom.for_atlas(args.atlas_id)}
-        new_names = [n for n in ms.names if n not in existing]
-        if new_names:
-            added = nom.add_from_atlas(args.atlas_id, new_names)
-            nom.save(nom_path)
-            print(f"  nomenclature : +{len(new_names)} entries, "
-                  f"{len(added)} new canonical names")
-    return 0
-
-
 def cmd_stain(args) -> int:
     """Build a virtual neuropil stain from predicted presynapse locations."""
     import shutil
@@ -768,17 +730,29 @@ def cmd_build(args) -> int:
         absent = set(missing(reg))
         print(f"{len(known)} assets have a recipe:")
         for a in known:
-            print(f"  {'MISSING' if a in absent else 'present'}  {a}")
+            cost = "  EXPENSIVE" if recipes[a].expensive else ""
+            print(f"  {'MISSING' if a in absent else 'present'}  {a}{cost}")
         no_recipe = [a for a in reg.assets if a not in recipes]
         if no_recipe:
             print()
-            print("No recipe (built with `lobemap stain`, then `lobemap tozarr`):")
+            print("No recipe:")
             for a in no_recipe:
                 print(f"  {a}")
         return 0
 
     if args.all:
-        wanted = [a for a in known if a in set(missing(reg))] if not             args.overwrite else known
+        # Expensive recipes are excluded unless asked for by name: nobody
+        # should start ~19 GB of downloads and hours of compute by typing
+        # `--all`.
+        cheap = buildable(reg, recipes, include_expensive=False)
+        wanted = cheap if args.overwrite else [
+            a for a in cheap if a in set(missing(reg))
+        ]
+        skipped = [a for a in known if a not in cheap]
+        if skipped:
+            print(f"skipping {len(skipped)} expensive recipe(s): "
+                  f"{', '.join(skipped)}")
+            print("build them by name when you want them.")
     else:
         wanted = list(args.asset or ())
     if not wanted:
@@ -838,8 +812,6 @@ def cmd_view(args) -> int:
         _registry_root(args),
         args.space,
         ndisplay=args.ndisplay,
-        bridged=args.bridged,
-        align_biology=args.align_biology,
         scene=args.scene,
         # `--show` was parsed and then never forwarded, so it silently did
         # nothing: layers start hidden, and asking for one by name was the
@@ -889,14 +861,9 @@ def main(argv: list[str] | None = None) -> int:
     v.add_argument("space", nargs="?", help="space id (omit if --scene is given)")
     v.add_argument("--scene", help="named preset from registry/scenes.toml")
     v.add_argument("--ndisplay", type=int, default=3, choices=(2, 3))
-    v.add_argument("--bridged", action="store_true",
-                   help="also bring in atlases from other spaces")
     v.add_argument("--show", action="append", metavar="LAYER",
                    help="start this layer visible; an asset id or a role "
                         "such as virtual_stain. Repeatable.")
-    v.add_argument("--align-biology", action="store_true",
-                   help="mirror when crossing a mirrored space, so the same "
-                        "side of the ANIMAL is compared")
     v.set_defaults(func=cmd_view)
 
     sc = sub.add_parser("scenes", help="list named scene presets")
@@ -1004,13 +971,6 @@ def main(argv: list[str] | None = None) -> int:
     np_.add_argument("--token")
     np_.set_defaults(func=cmd_ingest_neuprint)
 
-    bt = ingsub.add_parser("bates", help="Bates 2020 atlas from its Plotly HTML")
-    bt.add_argument("html")
-    bt.add_argument("--role", default="glomeruli", choices=("glomeruli", "brain"))
-    bt.add_argument("--asset-id", required=True)
-    bt.add_argument("--atlas-id")
-    bt.add_argument("--no-repair", action="store_true")
-    bt.set_defaults(func=cmd_ingest_bates)
 
     args = p.parse_args(argv)
     return args.func(args)

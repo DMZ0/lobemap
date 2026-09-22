@@ -49,6 +49,13 @@ class Recipe:
     pipeline: str
     source: str | None = None
     url: str | None = None
+    #: Several files that belong in one directory, for a loader that takes
+    #: the directory rather than a file -- the hemibrain shards.
+    urls: list[str] = field(default_factory=list)
+    into: str | None = None
+    #: Gigabytes of download and hours of compute. `--all` skips these; they
+    #: have to be named, so nobody starts one by accident.
+    expensive: bool = False
     params: dict = field(default_factory=dict)
 
 
@@ -72,6 +79,9 @@ def load_recipes(registry_root) -> dict[str, Recipe]:
             pipeline=body["pipeline"],
             source=body.get("source"),
             url=body.get("url"),
+            urls=list(body.get("urls", [])),
+            into=body.get("into"),
+            expensive=bool(body.get("expensive", False)),
             params=dict(body.get("params", {})),
         )
     return out
@@ -88,6 +98,18 @@ def resolve_source(recipe: Recipe, repo_root: Path, cache: Path,
                 f"expected to ship in the repository."
             )
         return path
+    if recipe.urls:
+        folder = cache / (recipe.into or recipe.asset)
+        folder.mkdir(parents=True, exist_ok=True)
+        for i, url in enumerate(recipe.urls, start=1):
+            target = folder / Path(url).name
+            if target.exists():
+                continue
+            if progress:
+                progress(f"downloading [{i}/{len(recipe.urls)}] "
+                         f"{Path(url).name}")
+            _download(url, target)
+        return folder
     if not recipe.url:
         return None
     cache.mkdir(parents=True, exist_ok=True)
@@ -96,11 +118,17 @@ def resolve_source(recipe: Recipe, repo_root: Path, cache: Path,
         return target
     if progress:
         progress(f"downloading {recipe.url}")
+    _download(recipe.url, target)
+    return target
+
+
+def _download(url: str, target: Path) -> None:
+    """Fetch to a .part file and rename, so an interrupted download is not
+    mistaken for a complete one on the next run."""
     tmp = target.with_suffix(target.suffix + ".part")
-    with urllib.request.urlopen(recipe.url) as resp, tmp.open("wb") as fh:
+    with urllib.request.urlopen(url) as resp, tmp.open("wb") as fh:
         shutil.copyfileobj(resp, fh, 1 << 20)
     tmp.replace(target)
-    return target
 
 
 # -- pipelines ------------------------------------------------------------
@@ -152,13 +180,6 @@ def _image_stack(src, params, **_):
     ).volume
 
 
-@pipeline("bates_plotly")
-def _bates(src, params, **_):
-    from .ingest.bates_plotly import ingest
-
-    return ingest(src, role=params.get("role", "glomeruli")).meshset
-
-
 @pipeline("slicer_vtm")
 def _slicer(src, params, **_):
     from .ingest.slicer_vtm import ingest
@@ -205,6 +226,56 @@ def _flywire(src, params, progress=None, **_):
     return meshset
 
 
+@pipeline("virtual_stain")
+def _virtual_stain(src, params, progress=None, workdir=None, **_):
+    """Presynapse density, binned and blurred, straight to a Volume.
+
+    Written directly at the registry's `.zarr` path rather than through the
+    documented npz-then-`tozarr` two-step: `save_zarr` fills level 0 in
+    slabs and builds each pyramid level from the one below, so nothing
+    larger than a slab is ever resident and the intermediate npz buys
+    nothing.
+    """
+    import numpy as np
+
+    from .ingest import synapse_buckets as sb
+    from .ingest.virtual_stain import build_stain
+
+    loader = {
+        "hemibrain": sb.hemibrain_presynapses,
+        "malecns": sb.malecns_presynapses,
+        "fafb": sb.fafb_presynapses,
+    }[params["bucket"]]
+
+    bounds = [float(v) for v in params["bounds"]]
+    lo, hi = np.array(bounds[:3]), np.array(bounds[3:])
+
+    def relay(i, n, k):
+        if progress:
+            progress(f"slab {i}/{n}: {k:,} presynapses")
+
+    def on_stage(label, i, n):
+        if progress:
+            progress(f"{label}: {i:,}/{n:,}")
+
+    confidence = params.get("confidence", 0.5)
+    volume, stats = build_stain(
+        loader(src, progress=relay), lo, hi,
+        space=params["space"],
+        source=f"{params['bucket']} bulk release: {Path(src).name}",
+        voxel_um=params.get("voxel", 0.25),
+        sigma_um=params.get("sigma", 0.45),
+        confidence=None if confidence is False else confidence,
+        dtype=np.dtype(params.get("dtype", "uint8")),
+        workdir=Path(params["workdir"]) if params.get("workdir") else workdir,
+        on_stage=on_stage,
+    )
+    if progress:
+        progress(f"{stats.n_points:,} synapses, {stats.n_outside:,} outside "
+                 f"the grid; {np.prod(volume.shape):,} voxels")
+    return volume
+
+
 # -- driver ---------------------------------------------------------------
 
 
@@ -242,7 +313,8 @@ def build_asset(registry, asset_id: str, recipes=None, progress=None,
     src = resolve_source(recipe, repo_root, cache, progress=progress)
     if progress:
         progress(f"{asset_id}: {recipe.pipeline}")
-    obj = fn(src, recipe.params, progress=progress)
+    obj = fn(src, recipe.params, progress=progress,
+             workdir=registry.data_root / ".stainwork")
 
     target.parent.mkdir(parents=True, exist_ok=True)
     # `Volume.save` dispatches on the suffix, so a registry path ending in
@@ -252,10 +324,13 @@ def build_asset(registry, asset_id: str, recipes=None, progress=None,
     return BuildResult(asset_id, target, obj.content_hash())
 
 
-def buildable(registry, recipes=None) -> list[str]:
+def buildable(registry, recipes=None, include_expensive: bool = True) -> list[str]:
     """Assets this can derive, in registry order."""
     recipes = recipes if recipes is not None else load_recipes(registry.root)
-    return [a for a in registry.assets if a in recipes]
+    return [
+        a for a in registry.assets
+        if a in recipes and (include_expensive or not recipes[a].expensive)
+    ]
 
 
 def missing(registry) -> list[str]:
