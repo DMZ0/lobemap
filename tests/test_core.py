@@ -122,17 +122,20 @@ def test_normalise():
     assert normalise("DL2 d") == normalise("DL2_d") == "DL2D"
 
 
-def test_add_from_atlas_and_resolve():
+def test_add_missing_and_resolve():
     n = Nomenclature()
-    added = n.add_from_atlas("a1", ["AL-DA1(R)", "AL-DA1(L)", "AL-VA1v(R)"])
-    assert sorted(added) == ["DA1", "VA1v"]  # DA1 added once, not per side
+    added = n.add_missing("a1", ["AL-DA1(R)", "AL-DA1(L)", "AL-VA1v(R)"])
+    # add_missing keys on the PUBLISHED name, so both sides get a row; the
+    # canonical set still gains DA1 only once.
+    assert added == ["AL-DA1(R)", "AL-DA1(L)", "AL-VA1v(R)"]
+    assert sorted(n.canonical) == ["DA1", "VA1v"]
     c = n.resolve("a1", "AL-DA1(L)")
     assert c is not None and c.canonical == ("DA1",)
 
 
 def test_cross_check_reports_both_directions():
     n = Nomenclature()
-    n.add_from_atlas("a1", ["AL-DA1(R)", "AL-VA1v(R)"])
+    n.add_missing("a1", ["AL-DA1(R)", "AL-VA1v(R)"])
     out = n.cross_check(["DA1", "DM6"])
     assert out["only_here"] == ["VA1v"]
     assert out["only_reference"] == ["DM6"]
@@ -140,7 +143,7 @@ def test_cross_check_reports_both_directions():
 
 def test_nomenclature_roundtrip(tmp_path):
     n = Nomenclature()
-    n.add_from_atlas("a1", ["AL-DA1(R)"])
+    n.add_missing("a1", ["AL-DA1(R)"])
     p = n.save(tmp_path / "nom.csv")
     back = Nomenclature.load(p)
     assert back.resolve("a1", "AL-DA1(R)").canonical == ("DA1",)

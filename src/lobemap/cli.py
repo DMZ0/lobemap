@@ -181,13 +181,14 @@ def cmd_ingest_neuprint(args) -> int:
 
     nom = Nomenclature.load(nom_path)
     if args.atlas_id and args.role == "glomeruli":
-        existing = {c.published_name for c in nom.for_atlas(args.atlas_id)}
-        new_names = [n for n in ms.names if n not in existing]
-        if new_names:
-            added = nom.add_from_atlas(args.atlas_id, new_names)
+        # `add_missing` skips names already recorded, so a curated merge or
+        # rename is left exactly as it is. This used to filter by hand and
+        # call the build-from-nothing path, which was correct only for as
+        # long as the filter was remembered.
+        added = nom.add_missing(args.atlas_id, list(ms.names))
+        if added:
             nom.save(nom_path)
-            print(f"  nomenclature : +{len(new_names)} entries, "
-                  f"{len(added)} new canonical names -> {nom_path}")
+            print(f"  nomenclature : +{len(added)} entries -> {nom_path}")
     _ = Registry  # registry is re-read lazily by other commands
     return 0
 
@@ -560,33 +561,102 @@ def cmd_check(args) -> int:
 
 
 def cmd_nomenclature(args) -> int:
-    """Re-derive the nomenclature table from the atlases; cross-check it.
+    """Audit the nomenclature table against the atlases. Read-only by default.
 
-    Per docs/implementation-plan.md M4 the canonical set is derived from the
-    atlases' own published names, then checked against lobemap's curated CSVs.
-    Disagreements are findings to resolve, never silently overwritten.
+    This used to re-derive the whole table and save it, which was destructive
+    in a way nothing reported. A mechanical derivation can only emit identity
+    relations, so every curated merge, split and rename was replaced by an
+    identity and the information was gone. Grabe's `VP1(L)` is recorded as a
+    merge onto VP1d;VP1l;VP1m; a regeneration flattened it to an exact match
+    on `VP1`, across eight rows, and printed a cheerful summary.
+
+    So: report differences and change nothing unless asked. `--add-missing`
+    adds rows for published names that have none, the one case a machine can
+    decide; `--prune-stale` removes rows for names an atlas no longer
+    publishes. Neither alters an existing row.
+
+    Reported PER SPACE. There is no global canonical set: an atlas is only
+    shown in its own space, so names only have to agree there.
     """
     import csv as _csv
 
     from .core.names import (
         Nomenclature,
+        audit_atlas,
         clean_reference_name,
         normalise,
         parse_roi,
     )
     from .core.registry import Registry
 
-    reg = Registry.load(_registry_root(args), validate=False)
-    nom = Nomenclature()
-    for atlas in sorted(reg.atlases.values(), key=lambda a: a.id):
-        try:
-            ms = reg.mesh(atlas.asset)
-        except (FileNotFoundError, KeyError):
-            continue
-        added = nom.add_from_atlas(atlas.id, list(ms.names))
-        print(f"  {atlas.id:<20} {len(ms.names):>3} names, {len(added):>2} new canonical")
-    out = nom.save(_registry_root(args) / "nomenclature.csv")
-    print(f"\n{len(nom.canonical)} canonical names -> {out}")
+    root = _registry_root(args)
+    reg = Registry.load(root, validate=False)
+    path = root / "nomenclature.csv"
+    nom = Nomenclature.load(path)
+
+    audits: dict[str, list] = {}
+    unreadable: list[str] = []
+    for space_id in reg.spaces:
+        for atlas in reg.atlases_in_space(space_id):
+            try:
+                ms = reg.mesh(atlas.asset)
+            except (FileNotFoundError, KeyError):
+                unreadable.append(atlas.id)
+                continue
+            audits.setdefault(space_id, []).append(
+                (atlas, audit_atlas(nom, atlas.id, list(ms.names)))
+            )
+
+    problems = 0
+    for space_id, entries in audits.items():
+        print(f"{space_id}  ({len(reg.vocabulary(space_id))} names)")
+        for atlas, a in entries:
+            bits = [f"{len(atlas.compartments)} compartments"]
+            if a.curated:
+                bits.append(f"{len(a.curated)} curated")
+            if a.missing:
+                bits.append(f"{len(a.missing)} MISSING")
+            if a.stale:
+                bits.append(f"{len(a.stale)} STALE")
+            print(f"  {a.atlas:<22} {', '.join(bits)}")
+            for name in a.missing:
+                print(f"      missing: {name}")
+                problems += 1
+            for name in a.stale:
+                print(f"      stale:   {name}")
+                problems += 1
+            for c in a.curated:
+                print(f"      curated: {c.published_name} -> "
+                      f"{';'.join(c.canonical)} ({c.relation})")
+        print()
+
+    if unreadable:
+        print(f"not built, so not audited: {', '.join(sorted(unreadable))}")
+        print()
+
+    if args.add_missing or args.prune_stale:
+        changed = 0
+        for entries in audits.values():
+            for atlas, a in entries:
+                names = list(reg.mesh(atlas.asset).names)
+                if args.add_missing and a.missing:
+                    changed += len(nom.add_missing(a.atlas, names))
+                if args.prune_stale and a.stale:
+                    changed += nom.drop(a.atlas, a.stale)
+        if changed:
+            nom.save(path)
+            print(f"wrote {changed} change(s) -> {path}")
+        else:
+            print("nothing to change")
+        return 0
+
+    if problems:
+        print(f"{problems} difference(s). Nothing was written: re-deriving "
+              f"the table would replace curated relations with identities.")
+        print("Apply the mechanical part with --add-missing / --prune-stale.")
+        return 1
+
+    print("the table matches the atlases")
 
     if args.cross_check:
         ref: list[str] = []
@@ -596,13 +666,16 @@ def cmd_nomenclature(args) -> int:
                 if value:
                     ref.append(parse_roi(clean_reference_name(value))[0])
         result = nom.cross_check(ref)
-        print(f"\ncross-check against {Path(args.cross_check).name} "
-              f"[{args.column}]: {len({normalise(r) for r in ref})} reference names")
+        print()
+        print(f"cross-check against {Path(args.cross_check).name} "
+              f"[{args.column}]: {len({normalise(r) for r in ref})} names")
         if result["only_reference"]:
-            print(f"  in reference but in NO atlas ({len(result['only_reference'])}): "
+            print(f"  in reference but in NO atlas "
+                  f"({len(result['only_reference'])}): "
                   f"{', '.join(result['only_reference'])}")
         if result["only_here"]:
-            print(f"  in atlases but not in reference ({len(result['only_here'])}): "
+            print(f"  in atlases but not in reference "
+                  f"({len(result['only_here'])}): "
                   f"{', '.join(result['only_here'])}")
         if not result["only_reference"] and not result["only_here"]:
             print("  fully consistent")
@@ -885,7 +958,12 @@ def main(argv: list[str] | None = None) -> int:
     chk.set_defaults(func=cmd_check)
 
     nm = sub.add_parser("nomenclature",
-                        help="re-derive the canonical name set from the atlases")
+                        help="audit the nomenclature table against the atlases")
+    nm.add_argument("--add-missing", action="store_true",
+                    help="add rows for published names that have none; "
+                         "existing rows are never touched")
+    nm.add_argument("--prune-stale", action="store_true",
+                    help="remove rows for names an atlas no longer publishes")
     nm.add_argument("--cross-check", help="CSV of curated names to compare against")
     nm.add_argument("--column", default="canonical_glomerulus",
                     help="column in the cross-check CSV holding the name")

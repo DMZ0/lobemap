@@ -73,6 +73,45 @@ class Correspondence:
     relation: Relation = "exact"
 
 
+@dataclass(frozen=True)
+class AtlasAudit:
+    """How one atlas's published names compare with what is recorded."""
+
+    atlas: str
+    #: Published by the atlas, with no row in the table.
+    missing: tuple[str, ...] = ()
+    #: Recorded, but the atlas no longer publishes that name.
+    stale: tuple[str, ...] = ()
+    #: Rows whose relation is not a plain identity. These are the hand-made
+    #: part of the table and cannot be re-derived from the atlases: the
+    #: Schlegel rename chain and Grabe's VP1 merge live here.
+    curated: tuple[Correspondence, ...] = ()
+
+    @property
+    def clean(self) -> bool:
+        return not self.missing and not self.stale
+
+
+def audit_atlas(nomenclature, atlas: str, published_names) -> AtlasAudit:
+    """Compare recorded correspondences against what an atlas publishes.
+
+    This reports; it does not decide. A mechanical derivation can only ever
+    produce identity relations -- published `AL-DA1(R)` maps to `DA1` -- so
+    regenerating the table from the atlases silently replaces every curated
+    merge, split and rename with an identity, and the information is simply
+    gone. Only the differences are actionable, and only some of them
+    automatically.
+    """
+    recorded = {c.published_name: c for c in nomenclature.for_atlas(atlas)}
+    names = list(published_names)
+    missing = tuple(n for n in names if n not in recorded)
+    stale = tuple(sorted(set(recorded) - set(names)))
+    curated = tuple(
+        c for c in recorded.values() if c.relation != "exact"
+    )
+    return AtlasAudit(atlas, missing, stale, curated)
+
+
 class Nomenclature:
     """The canonical glomerulus set plus per-atlas correspondences."""
 
@@ -110,25 +149,39 @@ class Nomenclature:
 
     # -- derivation ------------------------------------------------------
 
-    def add_from_atlas(self, atlas: str, published_names: list[str]) -> list[str]:
-        """Register an atlas's names, extending the canonical set.
+    def add_missing(self, atlas: str, published_names) -> list[str]:
+        """Record only the names that have no row yet, as identities.
 
-        Returns names that were newly added to the canonical set -- which is
-        how a new atlas reveals nomenclature the curated tables never covered.
+        The only way to extend the table. There was also an
+        `add_from_atlas` that assumed it was building from nothing and
+        emitted an identity row for every name it was given, including over
+        a curated merge. It is gone: on an empty table this does the same
+        thing, and on a populated one it does the right thing.
         """
-        added: list[str] = []
+        recorded = {c.published_name for c in self._corr.get(atlas, ())}
+        added = []
         for name in published_names:
+            if name in recorded:
+                continue
             glom, _side = parse_roi(name)
             key = normalise(glom)
             if key not in self._by_norm:
                 self._by_norm[key] = glom
                 self.canonical.append(glom)
-                added.append(glom)
             self._corr[atlas].append(
                 Correspondence(atlas, name, (self._by_norm[key],), "exact")
             )
+            added.append(name)
         self.canonical.sort()
         return added
+
+    def drop(self, atlas: str, published_names) -> int:
+        """Remove rows for names an atlas no longer publishes."""
+        gone = set(published_names)
+        keep = [c for c in self._corr.get(atlas, ()) if c.published_name not in gone]
+        removed = len(self._corr.get(atlas, ())) - len(keep)
+        self._corr[atlas] = keep
+        return removed
 
     # -- cross-check -----------------------------------------------------
 
