@@ -100,22 +100,3 @@ of input that is not kept:
 | JRCFIB2018F | `gs://neuroglancer-janelia-flyem-hemibrain/v1.2/synapses/by_id/` |
 | JRCFIB2022M | `gs://flyem-male-cns/v1.0/connectome-data/flat-connectome/syn-points-male-cns-v1.0-minconf-0.5.feather` |
 | FAFB14 | FAFB v783 Princeton synapse table — Dorkenwald S, et al. *Nature*, 2024. doi:10.1038/s41586-024-07558-y |
-
-## Kept, not currently used
-
-Three source folders that no recipe reads, retained because each could be
-wanted again:
-
-- [`bates-schlegel-2020/`](../registry/sources/bates-schlegel-2020/) (16 MB) —
-  the interactive Plotly atlas. Its antennal-lobe meshes are revised by Benton
-  2025's Dataset EV2, which is why that atlas was removed from the viewer
-  rather than shown beside it.
-- [`hemibrain/`](../registry/sources/hemibrain/) (3.8 MB) — glomerulus
-  surfaces exported from `hemibrainr`, superseded by the live neuPrint query,
-  plus reference tables this viewer does not present: VFB terms, odour
-  groupings, a per-glomerulus summary.
-- [`jrc2018unisex/`](../registry/sources/jrc2018unisex/) (39 MB) — the standard
-  light-microscopy target space and VFB's ROI volumes. The `JRC2018U` space was
-  removed because no atlas was native to it, but anything warped between LM and
-  EM would route through it, and it carries a real nc82 channel — which is what
-  the virtual stains approximate.
