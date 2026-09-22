@@ -426,9 +426,16 @@ normalised timestamps -- or a rebuild would look like changed data. A download
 whose checksum does not match is discarded rather than kept, and one bad
 artifact does not block the others.
 
-`base_url` is deliberately unset in the committed manifest: nothing is
-published yet, and a plausible URL that 404s would fail later and less
-clearly than no URL at all.
+`base_url` records where they went. All fourteen artifacts, 2.51 GB, are
+published as assets on the `data-v1` release of `DMZ0/lobemap`: three
+files over 400 MB, which rules out committing them, and none over 1.2 GB,
+which fits inside the 2 GiB per-asset limit without splitting. Release
+downloads are a flat namespace, which is the shape `fetch` already built
+its URLs in.
+
+Nothing ships in the repository any more, including the eleven small
+assets. Splitting the rule by size left two answers to the question of
+where the data lives, for the 76 MB it saved.
 
 Producing the bytes to publish needed its own command. `manifest` and
 `fetch --check` both zip a store in order to hash it and then delete the

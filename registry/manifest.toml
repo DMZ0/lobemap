@@ -2,8 +2,7 @@
 # sha256 is of the transferred bytes: for a .zarr store, of its zip.
 
 version = 1
-# base_url is unset: nothing is published yet. Pass --base-url to
-# `lobemap manifest`, or `--base-url` to `lobemap fetch`.
+base_url = "https://github.com/DMZ0/lobemap/releases/download/data-v1"
 
 [artifacts.benton2025_glomeruli]
 path = "benton2025_glomeruli.npz"

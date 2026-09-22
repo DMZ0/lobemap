@@ -22,10 +22,26 @@
   `__init__.py` disagreed (0.0.0 and 0.1.0.dev0) and both sat below the
   released 0.1.4 on the same PyPI name.
 
+### Added
+
+- `lobemap pack` writes the upload-ready copies of the data artifacts. `manifest` and `fetch --check` zipped a Zarr store to hash it and then deleted the archive, so the bytes a downloader receives could not be obtained; `pack` keeps them, under the names `fetch` requests, and re-hashes each against the manifest.
+- `lobemap fetch --all`, to include the virtual stains.
+
+### Changed
+
+- The data is published as release assets and no longer ships in the repository. All fourteen artifacts (2.51 GB) are on the [`data-v1` release](https://github.com/DMZ0/lobemap/releases/tag/data-v1), and `base_url` in the committed manifest points at them. The eleven small assets used to be tracked; splitting the rule by size left two answers to where the data lives, for the 76 MB it saved.
+- `lobemap fetch` holds back the three virtual stains unless asked for with `--all` or by name. They are 2.44 GB of the 2.51 GB total and are reference imagery that starts hidden, so every scene opens without them.
+- `lobemap view` fetches missing required artifacts before opening a scene. Nothing runs on `uv sync`, so this is the first opportunity a fresh clone has to get its data.
+- The "no data for this space" report leads with `lobemap fetch` rather than `lobemap build`.
+
+### Fixes
+
+- Removed three `*_stain.progress.log` files committed by accident.
+- A data release no longer starts a PyPI workflow run. It fired on every published release and failed at the tag check, mailing a failure for a release that was never meant to build a package.
+
 ### Notes
 
-- Built assets under `registry/data/` are gitignored and rebuildable; see
-  `registry/data/README.md`. `lobemap manifest` records their hashes.
+- Data under `registry/data/` is gitignored and fetched; `registry/manifest.toml` records what belongs there and each file's sha256. See `registry/data/README.md` for how each asset is rebuilt from source.
 
 ## 0.1.4 - 2026-08-20
 

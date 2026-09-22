@@ -66,25 +66,26 @@ class MissingAssets(RuntimeError):
         from ..build import load_recipes
 
         recipes = load_recipes(registry.root)
+        large = [a.id for a in self.assets
+                 if a.id in recipes and recipes[a.id].expensive]
         lines = [
             (f"No data for space {self.space!r}: {len(self.assets)} of its "
-             f"assets are not built yet."),
+             f"assets are not on disk."),
             "",
         ]
-        for asset in self.assets:
-            how = ("lobemap build " + asset.id) if asset.id in recipes                 else "lobemap stain  (see registry/data/README.md)"
-            lines.append(f"  {asset.id:32s} {how}")
-        have_recipe = [a.id for a in self.assets if a.id in recipes]
-        lines += ["", "Build everything that has a recipe:", "",
-                  "  lobemap build --all"]
-        if len(have_recipe) < len(self.assets):
+        lines += [f"  {asset.id}" for asset in self.assets]
+        # Fetch first. Building these takes anywhere from a neuPrint round
+        # trip to ~19 GB of synapse downloads and hours of compute, and the
+        # same bytes are a download away.
+        lines += ["", "Fetch them:", "", "  lobemap fetch"]
+        if large:
             lines += [
                 "",
-                "The virtual stains are not in that set: they need ~19 GB of",
-                "synapse downloads, ~40 GB of scratch and hours of compute.",
+                (f"{len(large)} of those is a virtual stain, which `fetch` "
+                 f"holds back: they are"),
+                "2.4 GB together. Ask for them with `lobemap fetch --all`.",
             ]
-        lines += ["", "Or fetch prebuilt data once a base_url is published:",
-                  "", "  lobemap fetch"]
+        lines += ["", "Or rebuild from source:", "", "  lobemap build --all"]
         return chr(10).join(lines)
 
 

@@ -24,6 +24,66 @@ def _data_root(args, root: Path) -> Path:
     return Path(override) if override else default_data_root(root)
 
 
+def _optional_assets(root: Path) -> set[str]:
+    """Assets nobody should start downloading without asking for them.
+
+    The same three the `build --all` rule holds back, and for the same
+    reason at the other end of the pipe: the virtual stains are 2.4 GB of
+    the 2.5 GB total. They are also reference imagery that starts hidden,
+    so every scene opens without them -- `build_scene` only fails when it
+    can find no SURFACES. Skipping them by default is the difference
+    between a 76 MB first run and a 2.5 GB one.
+    """
+    from .build import load_recipes
+
+    try:
+        recipes = load_recipes(root)
+    except (FileNotFoundError, KeyError):
+        return set()
+    return {name for name, r in recipes.items() if r.expensive}
+
+
+def _autofetch(root: Path, data_root: Path) -> None:
+    """Fetch the required artifacts before opening a scene.
+
+    Nothing runs on `uv sync`, so a fresh clone reaches the viewer with no
+    data at all. Rather than meeting a new user with instructions, fetch
+    what a scene cannot open without -- the meshes and the Grabe stack, 76
+    MB -- and leave the stains to be asked for. Silent when there is
+    nothing to do, and never fatal: a failure here should still let the
+    viewer start and report what it is missing in its own terms.
+    """
+    from .core import manifest as mf
+
+    path = root / "manifest.toml"
+    if not path.exists():
+        return
+    try:
+        arts, base_url = mf.load(path)
+    except Exception:                               # noqa: BLE001 - advisory
+        return
+    if not base_url:
+        return
+    optional = _optional_assets(root)
+    absent = [a for a in arts
+              if a.asset not in optional and not (data_root / a.path).exists()]
+    if not absent:
+        return
+    total = sum(a.size for a in absent) / 1e6
+    print(f"fetching {len(absent)} missing artifact(s), {total:.0f} MB")
+
+    def progress(i, n, status):
+        mark = {"ok": "OK  ", "missing": "MISS", "corrupt": "BAD "}[status.state]
+        print(f"  [{i}/{n}] {mark} {status.artifact.asset}", flush=True)
+
+    with contextlib.suppress(Exception):
+        results = mf.fetch(absent, data_root, base_url, progress=progress)
+        failed = [s for s in results if s.state != "ok"]
+        if failed:
+            print(f"  {len(failed)} could not be fetched; the viewer will "
+                  f"say what is missing", file=sys.stderr)
+
+
 def cmd_manifest(args) -> int:
     """Record sha256 and size for every data artifact on disk."""
     from .core import manifest as mf
@@ -101,7 +161,21 @@ def cmd_fetch(args) -> int:
     arts, base_url = mf.load(path)
     base_url = args.base_url or base_url
 
-    wanted = [a for a in arts if not args.asset or a.asset in set(args.asset)]
+    # Named assets win; otherwise the expensive ones are held back unless
+    # --all. Verifying a stain means re-zipping it, so this keeps the
+    # default `fetch` and `fetch --check` fast as well as small.
+    optional = _optional_assets(root)
+    if args.asset:
+        wanted = [a for a in arts if a.asset in set(args.asset)]
+    elif args.all:
+        wanted = list(arts)
+    else:
+        wanted = [a for a in arts if a.asset not in optional]
+        held = [a.asset for a in arts if a.asset in optional]
+        if held:
+            print(f"holding back {len(held)} large artifact(s): "
+                  f"{', '.join(held)}")
+            print("  fetch them with --all, or by name.")
     print(f"manifest: {len(arts)} artifacts, {len(wanted)} selected")
     print(f"data root: {data_root}")
 
@@ -120,8 +194,9 @@ def cmd_fetch(args) -> int:
         print("  everything present and verified; nothing to fetch")
         return 0
     if not base_url:
-        print("  no base_url: nothing is published yet. Pass --base-url once "
-              "the data has a home.", file=sys.stderr)
+        print("  no base_url recorded in the manifest. Pass --base-url, "
+              "or record one with `lobemap manifest --base-url`.",
+          file=sys.stderr)
         return 2
     print(f"  fetching {len(bad)} artifact(s) from {base_url}")
     results = mf.fetch([s.artifact for s in bad], data_root, base_url,
@@ -659,8 +734,8 @@ def cmd_check(args) -> int:
         print()
         print(f"NOTHING WAS CHECKED: {len(absent)} of {len(reg.assets)} "
               f"declared assets are not on disk, so no check could run.")
-        print("Build them with `lobemap build --all`, or fetch them with "
-              "`lobemap fetch` once a base_url is published.")
+        print("Fetch them with `lobemap fetch`, or rebuild them from "
+              "source with `lobemap build --all`.")
         return 1
     return 1 if failed else 0
 
@@ -984,10 +1059,15 @@ def cmd_view(args) -> int:
         faulthandler.enable(file=handle, all_threads=True)
         print(f"crash log: {crash_log}", flush=True)
 
+    # A fresh clone has no data: nothing runs on `uv sync`, so this is the
+    # first opportunity to get it.
+    root = _registry_root(args)
+    _autofetch(root, _data_root(args, root))
+
     from .viewer.app import run
 
     run(
-        _registry_root(args),
+        root,
         args.space,
         ndisplay=args.ndisplay,
         scene=args.scene,
@@ -1021,6 +1101,9 @@ def main(argv: list[str] | None = None) -> int:
     ft.add_argument("--manifest", default=None)
     ft.add_argument("--base-url", default=None, help="overrides the manifest's")
     ft.add_argument("--asset", action="append", help="only this asset; repeatable")
+    ft.add_argument("--all", action="store_true",
+                    help="include the virtual stains, which are held back by "
+                         "default because they are 2.4 GB of the 2.5 GB total")
     ft.add_argument("--check", action="store_true",
                     help="verify what is present and exit; download nothing")
     ft.set_defaults(func=cmd_fetch)

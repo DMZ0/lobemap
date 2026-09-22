@@ -1,6 +1,15 @@
 # Ingested assets
 
-Canonical `.npz` mesh containers, rebuilt from source rather than tracked.
+Nothing here is tracked. The artifacts are published as assets on the
+[`data-v1` release](https://github.com/DMZ0/lobemap/releases/tag/data-v1)
+and `lobemap fetch` puts them on disk, verified against
+`registry/manifest.toml`.
+
+What follows is how each one is rebuilt from its source, which is what
+`registry/recipes.toml` automates and `lobemap build` runs. Use it when
+you are regenerating an asset rather than installing; `lobemap pack` then
+writes the copies to upload.
+
 Regenerate with, e.g.:
 
 ```

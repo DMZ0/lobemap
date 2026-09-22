@@ -16,10 +16,11 @@ zip. Hashing a directory's contents instead would invite a reader to hash it
 differently -- file order, compression level, timestamps -- and get a mismatch
 on data that is perfectly fine.
 
-`base_url` is deliberately absent from the committed manifest. Nothing is
-published yet, and writing a plausible URL that 404s would be worse than
-writing none: `fetch` would fail at download time with a network error rather
-than immediately with "no base URL configured".
+`base_url` points at the GitHub release the artifacts are published as.
+`lobemap pack` produces the files to upload; the names it writes are the
+names `fetch` requests, so a release's asset list maps one-to-one onto this
+manifest. It stays optional: with no URL recorded, `fetch` says so
+immediately rather than failing later with a network error.
 """
 
 from __future__ import annotations

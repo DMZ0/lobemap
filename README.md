@@ -25,14 +25,23 @@ git clone https://github.com/DMZ0/lobemap
 cd lobemap && uv sync
 ```
 
+Then fetch the data, which is published separately rather than committed:
+
+```bash
+uv run lobemap fetch
+```
+
+That is 76 MB and enough to open every scene. The three virtual stains are
+held back because they are 2.4 GB; `uv run lobemap fetch --all` includes
+them, or name one to get it on its own.
+
 ## Quick start
 
 ```bash
 uv run lobemap view GRABE
 ```
 
-That opens the Grabe 2015 scene, which needs no extra data. To list what else
-is available:
+That opens the Grabe 2015 scene. To list what else is available:
 
 ```bash
 uv run lobemap scenes
@@ -73,12 +82,19 @@ and their colours.
 
 ## Data
 
-The atlas and neuropil meshes ship with the repository — about 72 MB, so a
-fresh clone opens every scene. The three virtual stains do not: they are
-2.4 GB across 24,364 chunk files, which is more than a git repository should
-carry and more than a reviewer should have to pull.
+None of the data is committed. All fourteen artifacts are published as
+assets on the [`data-v1`
+release](https://github.com/DMZ0/lobemap/releases/tag/data-v1) — 2.51 GB,
+of which the three virtual stains are 2.44 GB. `registry/manifest.toml`
+records the sha256 of every one, and `lobemap fetch` checks each download
+against it; a file that does not match is discarded rather than kept.
 
-Build them when you want them:
+`lobemap view` fetches anything a scene needs and cannot find, so in
+practice the explicit `fetch` above is a way to get it over with rather
+than a requirement. The stains are never fetched implicitly: they are
+reference imagery that starts hidden, and every scene opens without them.
+
+You can also rebuild from source instead of downloading:
 
 ```bash
 uv run lobemap build --list
@@ -96,6 +112,7 @@ automatically; `registry/recipes.toml` records exactly how.
 
 A rebuilt asset is not byte-identical to the original — every pipeline
 stamps the date it ran — but its *content* hash is, and the build prints it.
+`lobemap pack` writes the upload-ready copies if you are republishing.
 
 ## In the viewer
 

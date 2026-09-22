@@ -10,25 +10,15 @@ dist/
 cache/
 data/cache/
 
-# Built assets. Everything under registry/data is derived, but the rule is
-# split by SIZE rather than by provenance: the eleven small ones total 76 MB
-# and are tracked, so a clone can open every scene without building anything
-# first. Only the three virtual stains are excluded, and they are 2.4 GB in
-# 24,364 chunk files -- 97% of the total, and more than a repository should
-# carry or a reviewer should have to pull.
+# Built assets. Everything under registry/data is derived, and now all of
+# it is fetched rather than tracked: 14 artifacts, 2.51 GB, published as
+# release assets. `registry/manifest.toml` is the source of truth for what
+# belongs here and what each file's sha256 must be; `lobemap fetch` puts it
+# on disk and verifies it.
 #
-# Named individually rather than by pattern: a `*.zarr/` rule with negations
-# for the exceptions is easy to get subtly wrong, and getting it wrong here
-# means either committing gigabytes or silently shipping nothing.
-registry/data/fafb_stain.zarr/
-registry/data/hemibrain_stain.zarr/
-registry/data/malecns_stain.zarr/
-# `stain` writes an npz plus a sidecar array before `tozarr` converts it.
-registry/data/*_stain.npz
-registry/data/*.data.npy
-# Scratch: slab spill for the stain build, downloaded sources, zip staging.
-registry/data/.stainwork/
-registry/data/.build/
-registry/data/.manifest/
-# Upload-ready archives from `lobemap pack`: a second copy of the data.
-registry/data/.pack/
+# The eleven small ones used to be tracked so a clone could open a scene
+# without a network round trip. Splitting the rule by size meant the
+# repository and the release disagreed about where the data lived, and the
+# 76 MB it saved was not worth two answers to one question.
+registry/data/*
+!registry/data/README.md

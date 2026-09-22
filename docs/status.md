@@ -196,11 +196,12 @@ gone, along with the `manifold3d` dependency they needed.
 
 ### Still open in M7
 
-- **`base_url` is unset**: nothing is published. The mechanism is complete,
-  tested over `file://`, and `lobemap pack` now produces the upload-ready
-  archives; it needs a host. GitHub release assets fit (2 GiB per file, none
-  of the three over 1.2 GB, flat URLs matching what `fetch` builds); Zenodo
-  is the alternative if a DOI matters more than convenience.
+- ~~**`base_url` is unset**~~ **Done.** All fourteen artifacts are published
+  as assets on the `data-v1` release of `DMZ0/lobemap`, and `base_url` in
+  the committed manifest points at them. `lobemap pack` produces the files,
+  `fetch` downloads and verifies them, and `view` fetches what a scene needs
+  if it is absent. Zenodo remains worth doing if these are ever cited: a
+  release has no DOI and no permanence guarantee.
 - **The wheel does not yet carry the registry metadata.** `DEFAULT_REGISTRY`
   resolves relative to the source tree, so an installed wheel finds nothing
   unless `--registry` or `LOBEMAP_REGISTRY` is set. Packaging it means
