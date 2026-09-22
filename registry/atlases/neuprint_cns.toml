@@ -1,0 +1,5 @@
+id = "neuprint_cns"
+title = "neuPrint male CNS"
+native_space = "JRCFIB2022M"
+asset = "neuprint_cns_glomeruli"
+citation = "Janelia FlyEM male CNS (male-cns:v1.0)"

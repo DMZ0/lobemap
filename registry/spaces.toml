@@ -1,0 +1,103 @@
+# lateral_convention: does image laterality match the animal's?
+#
+#   "biological" - image left is the fly's right (normal frontal-view convention)
+#   "mirrored"   - the image data is left-right inverted, so image left is the
+#                  fly's LEFT
+#
+# FAFB and FlyWire are mirrored. Established by two measurements rather than
+# assumed:
+#
+#  1. Hemibrain's labels are biologically correct. The asymmetric body is known
+#     to be larger on the fly's right, and in hemibrain AB(R) is 1431 um3
+#     against AB(L)'s 390 um3 -- 3.7x. So hemibrain (R) is the fly's right.
+#
+#  2. FlyWire's AL_L -- the modern, post-correction annotation, so biologically
+#     left -- bridges onto hemibrain AL(R) at 4.6 um versus 94.3 um to AL(L);
+#     AL_R lands on AL(L). Laterality is swapped by the bridge. (Those FlyWire
+#     shells were used for this measurement and then removed; they are not part
+#     of the catalogue.)
+#
+# So the bridging registrations preserve APPARENT side, not biological side.
+# Crossing between a mirrored and a biological space needs an explicit mirror
+# to keep biological correspondence: resolve(..., align_biology=True).
+
+# Coordinate spaces. `flybrains_template` names a navis-flybrains template;
+# omit it (or leave it empty) for an island -- a space with no bridges.
+# Measured bridging status is in docs/design.md section 3.
+
+[FAFB14]
+title = "FAFB14"
+units = "nm"
+flybrains_template = "FAFB14"
+lateral_convention = "mirrored"
+# Anatomical axes, from two independent determinations that agree.
+#
+# 1. Drosophila AL nomenclature encodes position: the first letter is Dorsal
+#    or Ventral, the second Anterior or Posterior. Averaging ~58 glomerulus
+#    centroids per contrast gives an axis whose dominant component carries
+#    0.92-0.99 of its length -- unambiguous.
+# 2. Looking at an anterior face, the animal's LEFT falls on the viewer's
+#    right, except in FAFB, whose image data is left-right inverted. With
+#    screen-right = view x up, this reproduces method 1 in every space.
+#
+# An earlier attempt inferred `dorsal` from where the brain mesh was narrowest
+# and got the sign backwards in all four spaces; it is recorded here because
+# the resulting view was upside down and looked like a camera bug.
+#
+# FAFB14: names give anterior -z (0.96) and dorsal -y (0.98); the
+# biologically-left AL sits 107 um to the viewer's LEFT, which is right for
+# a mirrored space.
+anterior = "-z"
+dorsal = "-y"
+default_scene = "benton2025"
+notes = """The FAFB-family hub. Reaches hemibrain in 2 warps with no external \
+binary, whereas the FlyWire route goes through CMTK -- so FAFB-family assets \
+are landed here at ingest. FlyWire is deliberately not a registered space: \
+no asset lives in it, and navis still routes through it internally when \nthat is the shortest path."""
+
+# Anterior is +y here, a DIFFERENT axis from FAFB and the male CNS, which is
+# why these are per-space rather than a constant. Names give +y (0.99) and
+# dorsal -z (0.93); the left AL lands 94 um to the viewer's right.
+[JRCFIB2018F]
+title = "Hemibrain (JRCFIB2018F)"
+units = "nm"
+flybrains_template = "JRCFIB2018F"
+anterior = "+y"
+dorsal = "-z"
+default_scene = "hemibrain"
+notes = """Half-brain. No explicit mirror registration: navis.mirror_brain \
+still succeeds but falls back to a bounding-box reflection, which is not a \
+midline mirror here. Mirror in a symmetric space, then bridge in."""
+
+[JRCFIB2022M]
+title = "Male CNS (JRCFIB2022M)"
+units = "nm"
+flybrains_template = "JRCFIB2022M"
+# Names give anterior -z (0.98) and dorsal -y (0.98); the left AL lands 121 um
+# to the viewer's right.
+anterior = "-z"
+dorsal = "-y"
+default_scene = "male_cns"
+notes = """Whole CNS: 753 x 627 x 1077 um, 8 nm voxels. Brain-only work must \
+exclude the VNC -- the ROI tree splits into CentralBrain, Optic(L), Optic(R), \
+VNC and CV, so brain = CentralBrain + Optic(L) + Optic(R)."""
+
+[JRC2018U]
+title = "JRC2018 Unisex"
+units = "um"
+flybrains_template = "JRC2018U"
+notes = "LM template space; carries the real nc82 channel."
+
+[GRABE]
+# Confocal, so the optical axis is antero-posterior. Names give anterior -y
+# and dorsal -z, at a weaker 0.75 dominance than the EM volumes -- this is
+# an AL-only stack, so the positional contrasts have a shorter baseline --
+# but the handedness check agrees: the left AL lands 126 um to the
+# viewer's right.
+anterior = "-y"
+dorsal = "-z"
+default_scene = "grabe2015"
+title = "Grabe 2015 LM template"
+units = "um"
+notes = """Island: no bridging registration to any EM space. Its scene has one \
+atlas and its own LM stack as the only reference layer."""
