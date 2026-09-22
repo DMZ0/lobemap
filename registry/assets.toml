@@ -142,15 +142,23 @@ doi = "10.1016/j.cub.2015.07.036"
 # NaN outside it -- 10 of 1184 shell vertices -- which resolve() fills from
 # the input coordinates, recording the count.
 #
-# All 78 neuropils fafbseg serves, not just the antennal lobes: there is no
-# whole-brain entry in `get_neuropil_volumes`, so the brain outline IS their
-# union, and keeping them separate costs nothing while making each one
-# toggleable. This replaces the whole-brain mesh that was read out of the
-# Bates Plotly file, which was the one piece of FAFB reference geometry not
-# coming from fafbseg.
+# The 80 primary brain neuropils of the male CNS, warped into FAFB14.
 #
-# `side` is biological. Independent confirmation of the Bates laterality
-# finding: all 58 Bates centroids fall inside AL_L, none inside AL_R.
+# They used to come from `fafbseg.flywire.get_neuropil_volumes`, which serves
+# 78 for this space but heavily decimated: 394 vertices and 7.1 um facets at
+# the median, so a ~100 um lobe read as a faceted polyhedron. The male CNS
+# meshes are 6,459 vertices and 1.9 um.
+#
+# The cost is that the shell is no longer FAFB's own anatomy. Containment
+# falls from 58/58 to 57/58: Benton's DM2 centroid sits 4.4 um outside the
+# warped AL, where the median glomerulus still has 7.4 um of margin. That is
+# a boundary difference between specimens of different sex, not a
+# misregistration -- the two ALs agree to 6.4 and 9.0 um.
+#
+# `side` is biological, and the bridge is built with `align_biology`: FAFB's
+# image data is inverted and the male CNS's is not, and the transform
+# preserves APPARENT side, so without the mirror AL(L) lands on the other
+# lobe.
 [fafb_neuropil]
 role = "neuropil"
 space = "FAFB14"

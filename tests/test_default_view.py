@@ -95,7 +95,9 @@ def test_left_al_lands_on_the_viewers_right_except_in_fafb():
     """
     reg = Registry.load(REGISTRY)
     cases = {
-        "FAFB14": ("fafb_neuropil", "AL_L", "AL_R", -1),
+        # The FAFB shell is warped in from the male CNS, so it uses that
+        # dataset's naming; it was FlyWire's AL_L/AL_R before.
+        "FAFB14": ("fafb_neuropil", "AL(L)", "AL(R)", -1),
         "JRCFIB2018F": ("neuprint_hemibrain_neuropil", "AL(L)", "AL(R)", +1),
         "JRCFIB2022M": ("neuprint_cns_neuropil", "AL(L)", "AL(R)", +1),
         "GRABE": ("grabe2015_glomeruli", "DA1(L)", "DA1(R)", +1),

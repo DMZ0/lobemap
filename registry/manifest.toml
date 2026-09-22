@@ -14,8 +14,8 @@ size = 2576868
 [artifacts.fafb_neuropil]
 path = "fafb_neuropil.npz"
 kind = "file"
-sha256 = "6a09c8bd13599b6f35e647562396afe9d4cf723ee86d32e80bcaf8d1a63ffb62"
-size = 922845
+sha256 = "ba483f31b50e04e95cabe9b293d92343b495434c259465844c388365102d0126"
+size = 12086376
 
 [artifacts.fafb_stain]
 path = "fafb_stain.zarr"
