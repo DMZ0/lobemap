@@ -91,8 +91,9 @@ against it; a file that does not match is discarded rather than kept.
 
 `lobemap view` fetches anything a scene needs and cannot find, so in
 practice the explicit `fetch` above is a way to get it over with rather
-than a requirement. The stains are never fetched implicitly: they are
-reference imagery that starts hidden, and every scene opens without them.
+than a requirement. The stains are never fetched implicitly, because
+every scene opens without one — but a stain that *is* on disk is shown,
+so fetching one changes what you see the next time that scene opens.
 
 You can also rebuild from source instead of downloading:
 
@@ -124,8 +125,10 @@ stamps the date it ran — but its *content* hash is, and the build prints it.
   glomerulus, and a second to write its name on the slice.
 - The control at the bottom right switches between scenes without
   restarting.
-- Reference images start hidden. `--show` reveals one by asset id or by
-  role, for example `--show virtual_stain`.
+- A scene's reference image — the virtual stain, or the Grabe confocal
+  channel — is shown whenever it has been fetched. `--show` turns on a
+  layer that is off, by asset id or by role, for example `--show
+  neuropil`.
 
 Both the mesh and contour layers stay in the layer list in either mode; the
 one the current mode cannot draw is simply switched off.

@@ -426,6 +426,9 @@ def _add_images(viewer, registry: Registry, space: str) -> list:
             layer = viewer.add_labels(
                 np.asarray(volume.data),
                 name=asset.id,
+                # Off, unlike the images above: this is a segmentation of
+                # the same glomeruli the meshes already draw, so showing
+                # both by default draws each one twice.
                 visible=False,
                 opacity=0.6,
                 **volume.napari_kwargs(),
@@ -448,7 +451,19 @@ def _add_images(viewer, registry: Registry, space: str) -> list:
             data,
             multiscale=volume.is_multiscale,
             name=asset.id,
-            visible=False,
+            # Visible if it is here at all. These are backdrops -- the
+            # confocal channel, the synapse-density stain -- and a scene
+            # reads as incomplete without one. They used to be created
+            # hidden and turned on again by every default scene preset,
+            # so the default only ever applied to a scene that forgot to
+            # mention its own image: `hemibrain_three_ways` opened with
+            # the stain off for no reason anyone chose. A preset that
+            # wants one off can still say `visible = false`.
+            #
+            # Nothing here is conditional on the asset being built: this
+            # loop skips what is not on disk, so an absent stain is an
+            # absent layer rather than an invisible one.
+            visible=True,
             **display_for(asset.role, asset.colormap, asset.display),
             **volume.napari_kwargs(),
         )
@@ -678,9 +693,10 @@ def apply_scene(registry: Registry, scene_id: str, surfaces, contours,
                 images=()) -> None:
     """Apply a named preset: which layers are visible, and which compartments.
 
-    Image layers are included now. They are created hidden -- several are
-    whole-brain volumes -- so a scene that means to show the stain has to say
-    so, and previously had no way to.
+    Image layers are included. They default to visible, so what a preset
+    adds is the ability to turn one OFF -- which `grabe2015` does for the
+    label volume, and which a scene wanting bare geometry would do for its
+    stain.
     """
     scene = registry.scenes[scene_id]
     wanted = {layer.ref: layer for layer in scene.layers}
@@ -892,9 +908,9 @@ def run(
 def _show_layers(viewer, wanted) -> None:
     """Turn on layers named on the command line, by id or by role.
 
-    Image layers start hidden because several of them are whole-brain volumes;
-    asking for one by name is the way to see it without waiting for all of
-    them.
+    Reference images are visible already; what this is for is the layers
+    that are not -- the neuropil shells, the Grabe label volume -- and
+    anything a scene preset deliberately turned off.
     """
     names = {layer.name for layer in viewer.layers}
     for want in wanted:

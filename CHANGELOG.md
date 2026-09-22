@@ -33,6 +33,7 @@
 - `lobemap fetch` holds back the three virtual stains unless asked for with `--all` or by name. They are 2.44 GB of the 2.51 GB total and are reference imagery that starts hidden, so every scene opens without them.
 - `lobemap view` fetches missing required artifacts before opening a scene. Nothing runs on `uv sync`, so this is the first opportunity a fresh clone has to get its data.
 - The "no data for this space" report leads with `lobemap fetch` rather than `lobemap build`.
+- Reference images are visible whenever they are on disk. They were created hidden and turned back on by each default scene preset, so the default only governed a scene that did not name its own image — `hemibrain_three_ways` opened with the stain off, which nobody had chosen. A preset can still turn one off. The Grabe label volume stays off: it is a segmentation of the glomeruli the meshes already draw.
 
 ### Fixes
 

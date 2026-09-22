@@ -150,3 +150,41 @@ def test_alpha_repaint_is_immediate_and_cheap(registry, viewer):
     # Hidden compartments are alpha 0 in the colormap.
     assert float(s.layer.colormap.colors[0][3]) == 0.0
     assert float(s.layer.colormap.colors[20][3]) == 1.0
+
+
+def test_a_reference_image_is_visible_wherever_it_is_present(registry):
+    """If the data is on disk, the backdrop is on.
+
+    These layers were created hidden and turned back on by each default
+    scene preset, so the default only ever governed a scene that did not
+    mention its own image -- and `hemibrain_three_ways` opened with the
+    stain off because of it, which nobody had chosen. The preset keeps
+    the power to turn one off; it is no longer what turns them on.
+    """
+    import napari
+
+    from lobemap.viewer.app import load_space
+
+    try:
+        viewer = napari.Viewer(show=False)
+    except Exception as exc:                        # pragma: no cover
+        pytest.skip(f"no Qt display: {exc}")
+    try:
+        for scene_id, scene in registry.scenes.items():
+            viewer.layers.clear()
+            load_space(viewer, registry, scene.space, scene=scene_id,
+                       fit=False)
+            for layer in viewer.layers:
+                meta = layer.metadata.get("lobemap", {})
+                if meta.get("kind") == "image":
+                    assert layer.visible, (
+                        f"{scene_id}: {layer.name} is present but hidden"
+                    )
+                elif meta.get("kind") == "labels":
+                    # A segmentation of the glomeruli the meshes already
+                    # draw: on by default would draw each one twice.
+                    assert not layer.visible, (
+                        f"{scene_id}: {layer.name} should stay off"
+                    )
+    finally:
+        viewer.close()
