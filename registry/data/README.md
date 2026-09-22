@@ -83,5 +83,9 @@ lobemap tozarr registry/data/malecns_stain.npz
 ```
 
 That builds a 5-6 level multiscale pyramid and leaves the three stains at
-2.30 GB in total; the `.npz`/`.npy` inputs can then be deleted. The two LM
-stacks (`grabe2015_stack`) are stored the same way.
+2.30 GB in total; the `.npz`/`.npy` inputs can then be deleted.
+
+`grabe2015_stack` is NOT stored that way. A pyramid earns its keep on a
+2-5 G-voxel whole-brain grid; that stack is 31 M voxels, so the viewer
+always reads level 0 and the extra levels are 184 files of dead weight.
+It is a single npz.

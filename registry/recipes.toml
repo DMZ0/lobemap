@@ -1,0 +1,120 @@
+# How each built asset is derived.
+#
+# The pipelines always existed; what did not was a machine-readable record of
+# WHICH pipeline to run for which asset, and with what arguments. Those lived
+# as prose in registry/data/README.md and as Python snippets a reader had to
+# retype, so nine of the fifteen assets had no runnable path at all. Here they
+# are data, and `lobemap build` executes them.
+#
+# `source` paths are relative to the repository root. A `url` is downloaded
+# and cached under the data root's `.build/` instead.
+#
+# NOT COVERED HERE: the three virtual stains. They need ~19 GB of synapse
+# downloads, ~40 GB of scratch and hours of compute, so they stay behind
+# `lobemap stain` where invoking them is a deliberate act. See
+# registry/data/README.md for their exact parameters.
+
+# -- Grabe 2015 -----------------------------------------------------------
+# Entirely offline: the confocal stack and the Amira label volume both ship
+# in datasets/. Both TIFFs are (119, 514, 513) in z, y, x, so they share a
+# grid and take the same voxel size and transpose.
+
+[grabe2015_glomeruli]
+pipeline = "label_volume"
+source = "datasets/grabe-2015/data/source/Merged_2-101221a-labels_only_sure_ones_Sensillarcolors.tif"
+[grabe2015_glomeruli.params]
+materials = "datasets/grabe-2015/data/source/Merged_2-101221a-labels_only_sure_ones_Sensillarcolors.am"
+voxel_um_zyx = [0.96, 0.34, 0.34]
+transpose = [2, 1, 0]
+mask_sigma_um = 1.0
+level = 0.44
+smooth = 0
+
+[grabe2015_labels]
+pipeline = "label_masks"
+source = "datasets/grabe-2015/data/source/Merged_2-101221a-labels_only_sure_ones_Sensillarcolors.tif"
+[grabe2015_labels.params]
+materials = "datasets/grabe-2015/data/source/Merged_2-101221a-labels_only_sure_ones_Sensillarcolors.am"
+voxel_um_zyx = [0.96, 0.34, 0.34]
+transpose = [2, 1, 0]
+
+[grabe2015_stack]
+pipeline = "image_stack"
+source = "datasets/grabe-2015/data/source/invivoALstack.tif"
+[grabe2015_stack.params]
+space = "GRABE"
+voxel_um_zyx = [0.96, 0.34, 0.34]
+transpose = [2, 1, 0]
+role = "template_image"
+# Written as a single npz, not a zarr store. At 31 M voxels the whole
+# volume is 31 MB, well under the 700 M-voxel threshold at which the
+# viewer would pick a coarser pyramid level, so the three levels were
+# never used -- and a zarr store is 184 files where this is one.
+# Volume.save dispatches on the registry path's suffix.
+
+# -- FAFB atlases ---------------------------------------------------------
+# Also offline; both source files ship in datasets/.
+
+[bates2020_glomeruli]
+pipeline = "bates_plotly"
+source = "datasets/bates-schlegel-2020/data/source/glomeruli_atlas_interactive.html"
+
+[benton2025_glomeruli]
+pipeline = "slicer_vtm"
+source = "datasets/benton-2025/data/source/BentonDatasetEV2/DatasetEV2.seg.vtm"
+[benton2025_glomeruli.params]
+# Delivered in 3D Slicer RAS; negating x and y puts its centroid cloud 0.0 um
+# from Bates.
+ras_to_lps = true
+
+# -- Schlegel 2021 --------------------------------------------------------
+# Downloaded from the eLife CDN, CC BY 4.0.
+
+[schlegel2021_s11_glomeruli]
+pipeline = "obj_archive"
+url = "https://cdn.elifesciences.org/articles/66018/elife-66018-supp11-v2.zip"
+
+[schlegel2021_s12_glomeruli]
+pipeline = "obj_archive"
+url = "https://cdn.elifesciences.org/articles/66018/elife-66018-supp12-v2.zip"
+
+# -- neuPrint -------------------------------------------------------------
+# Needs NEUPRINT_APPLICATION_CREDENTIALS.
+
+[neuprint_hemibrain_glomeruli]
+pipeline = "neuprint_rois"
+[neuprint_hemibrain_glomeruli.params]
+server = "neuprint.janelia.org"
+dataset = "hemibrain:v1.2.1"
+role = "glomeruli"
+
+[neuprint_hemibrain_neuropil]
+pipeline = "neuprint_rois"
+[neuprint_hemibrain_neuropil.params]
+server = "neuprint.janelia.org"
+dataset = "hemibrain:v1.2.1"
+role = "neuropil"
+
+[neuprint_cns_glomeruli]
+pipeline = "neuprint_rois"
+[neuprint_cns_glomeruli.params]
+server = "neuprint-cns.janelia.org"
+dataset = "male-cns:v1.0"
+role = "glomeruli"
+
+[neuprint_cns_neuropil]
+pipeline = "neuprint_rois"
+[neuprint_cns_neuropil.params]
+server = "neuprint-cns.janelia.org"
+dataset = "male-cns:v1.0"
+role = "neuropil"
+
+# -- FlyWire neuropils ----------------------------------------------------
+# Needs FLYWIRE_APPLICATION_CREDENTIALS. Served in FLYWIRE space and bridged
+# to FAFB14 as part of the build, because the registry declares the asset in
+# FAFB14 and an unbridged mesh would land in the wrong place.
+
+[fafb_neuropil]
+pipeline = "flywire_neuropils"
+[fafb_neuropil.params]
+bridge_to = "FAFB14"

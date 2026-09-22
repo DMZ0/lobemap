@@ -146,7 +146,7 @@ role = "template_image"
 space = "GRABE"
 kind = "image"
 side = "both"
-path = "data/grabe2015_stack.zarr"
+path = "data/grabe2015_stack.npz"
 display = { colormap = "magenta", gamma = 0.7, attenuation = 0.1 }
 [grabe2015_stack.source]
 doi = "10.1016/j.cub.2015.07.036"

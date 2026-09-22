@@ -151,6 +151,60 @@ def label_names(materials: dict[int, str]) -> dict[int, str]:
     return out
 
 
+def masks_volume(label_path, materials: dict[int, str],
+                 voxel_um_zyx, transpose=(2, 1, 0)):
+    """The publication's own voxel masks as a Volume, unmodified.
+
+    The meshes in `grabe2015_glomeruli` are surfaced FROM this, so keeping it
+    means the smoothing can always be checked against its input.
+
+    It is stored as npz rather than zarr on purpose: a multiscale pyramid
+    averages neighbouring voxels, and the mean of two label ids is a third
+    label -- a plausible-looking glomerulus that does not exist.
+
+    The value -> name map travels in the metadata. Without it the viewer
+    cannot colour a mask the same as its mesh, and the correspondence lives
+    only in the Amira header, which does not ship.
+    """
+    import tifffile
+
+    from ..core.imagefmt import Volume
+
+    label_path = Path(label_path)
+    labels = np.transpose(tifffile.imread(label_path), transpose)
+    spacing = tuple(float(voxel_um_zyx[a]) for a in transpose)
+    names = label_names(materials)
+
+    present = set(np.unique(labels).tolist()) - {0}
+    unnamed = sorted(present - set(names))
+    if unnamed:
+        raise ValueError(
+            f"voxel values with no material name: {unnamed}. The Amira Id "
+            f"offset is probably wrong; see `materials_from_amira`."
+        )
+
+    return Volume(
+        data=labels,
+        voxel_um=spacing,
+        meta={
+            "source": "label-volume",
+            "source_file": label_path.name,
+            "role": "glomeruli",
+            "kind": "labels",
+            "units": "um",
+            "transpose": list(transpose),
+            "note": (
+                "the publication's own voxel-wise masks, unmodified. The "
+                "meshes in grabe2015_glomeruli are surfaced from these; "
+                "value = Amira material Id - 1."
+            ),
+            "label_names": {str(k): v for k, v in sorted(names.items())},
+            "label_names_source": label_path.with_suffix(".am").name,
+            "retrieved": datetime.now(UTC).date().isoformat(),
+        },
+    )
+
+
 def orient_outward(verts: np.ndarray, faces: np.ndarray) -> np.ndarray:
     """Face winding that puts normals outward, flipping it if they are not.
 

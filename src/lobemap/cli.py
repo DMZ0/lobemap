@@ -38,8 +38,47 @@ def cmd_manifest(args) -> int:
         print(f"  [{i}/{len(assets)}] {asset_id:26s} {size / 1e6:9.1f} MB", flush=True)
 
     arts = mf.build(data_root, assets, progress=progress)
+
+    # Artifacts that are not on disk KEEP their existing record unless the
+    # caller asks otherwise. `build` only describes files it can see, so a
+    # plain regenerate on a machine missing some assets silently dropped
+    # their checksums -- and those checksums are the only way to verify a
+    # later download. With the three stains absent this would have discarded
+    # exactly the records that cannot be recomputed without ~19 GB and hours
+    # of work.
     out = Path(args.output) if args.output else root / "manifest.toml"
+    dropped = []
+    if out.exists() and not args.prune:
+        previous, prev_base = mf.load(out)
+        fresh = {a.path for a in arts}
+        # Only for paths the registry STILL declares. Keeping every
+        # unregenerated record instead would preserve orphans: renaming
+        # grabe2015_stack from .zarr to .npz left the old .zarr record
+        # sitting beside the new one, and the manifest claimed 16 artifacts
+        # for a registry of 15.
+        declared = {
+            a.path.relative_to(data_root).as_posix()
+            for a in reg.assets.values()
+        }
+        kept = [a for a in previous
+                if a.path not in fresh and a.path in declared]
+        orphans = [a.path for a in previous
+                   if a.path not in fresh and a.path not in declared]
+        for path in orphans:
+            print(f"  dropping orphaned record: {path}")
+        if kept:
+            print(f"  keeping {len(kept)} record(s) for artifacts not on disk:")
+            for a in kept:
+                print(f"    {a.path}")
+        arts = arts + kept
+        arts.sort(key=lambda a: a.path)
+        if args.base_url is None:
+            args.base_url = prev_base
+    elif args.prune:
+        dropped = ["(pruned records for absent artifacts)"]
     out.write_text(mf.dump(arts, args.base_url), encoding="utf-8")
+    for line in dropped:
+        print(f"  {line}")
     total = sum(a.size for a in arts)
     print(f"  {len(arts)} artifacts, {total / 1e9:.2f} GB transferred size")
     print(f"  written: {out}")
@@ -400,13 +439,27 @@ def cmd_spaces(args) -> int:
     reg = Registry.load(_registry_root(args), validate=False)
     have = sp.available()
     print(f"flybrains available: {have}")
+    # The `ok` column is about the flybrains TEMPLATE, not about data on
+    # disk, and on an empty install every space still read "ok, 2 atlas(es)"
+    # -- a readiness claim the install could not honour. The data column
+    # says what is actually there.
+    absent_total = 0
     for s in reg.spaces.values():
         n_at = len(reg.atlases_in_space(s.id))
         tmpl = s.flybrains_template or "-- island --"
         ok = "" if not have or s.is_island else (
             " ok" if sp.template_exists(s.flybrains_template) else " MISSING"
         )
-        print(f"  {s.id:<14} {s.units:<3} {tmpl:<16}{ok}  {n_at} atlas(es)")
+        assets = list(reg.assets_in_space(s.id))
+        here = sum(1 for a in assets if a.path.exists())
+        absent_total += len(assets) - here
+        data = f"{here}/{len(assets)} assets built" if assets else "no assets"
+        print(f"  {s.id:<14} {s.units:<3} {tmpl:<16}{ok}  "
+              f"{n_at} atlas(es)  {data}")
+    if absent_total:
+        print()
+        print(f"{absent_total} declared asset(s) are not on disk. "
+              f"`lobemap build --list` shows which can be rebuilt.")
     return 0
 
 
@@ -527,6 +580,20 @@ def cmd_check(args) -> int:
     failed = [c for c in checks if not c.passed]
     print()
     print(f"{len(checks) - len(failed)}/{len(checks)} checks passed")
+    if not checks:
+        # "0/0 checks passed" with exit 0 is how an empty install reported
+        # itself: a validation command succeeding because it validated
+        # nothing. Every check needs an asset on disk, so no assets means no
+        # checks, and that is a failure to report rather than a pass.
+        from .build import missing
+
+        absent = missing(reg)
+        print()
+        print(f"NOTHING WAS CHECKED: {len(absent)} of {len(reg.assets)} "
+              f"declared assets are not on disk, so no check could run.")
+        print("Build them with `lobemap build --all`, or fetch them with "
+              "`lobemap fetch` once a base_url is published.")
+        return 1
     return 1 if failed else 0
 
 
@@ -673,11 +740,70 @@ def cmd_scenes(args) -> int:
     if not reg.scenes:
         print("no scenes defined")
         return 0
+    # A scene naming a layer whose asset is not built cannot open as
+    # described. Listing them all as though they can is the same readiness
+    # claim `spaces` used to make.
     for scene in reg.scenes.values():
-        layers = ", ".join(layer.ref for layer in scene.layers if layer.visible)
-        print(f"  {scene.id:<26} {scene.space:<13} {scene.title}")
-        print(f"  {'':<26} {'':<13} layers: {layers}")
+        layers = [layer.ref for layer in scene.layers if layer.visible]
+        absent = [
+            ref for ref in layers
+            if ref in reg.assets and not reg.assets[ref].path.exists()
+        ]
+        mark = "" if not absent else f"  [needs {', '.join(absent)}]"
+        print(f"  {scene.id:<26} {scene.space:<13} {scene.title}{mark}")
+        print(f"  {'':<26} {'':<13} layers: {', '.join(layers)}")
     return 0
+
+
+def cmd_build(args) -> int:
+    """Derive built assets from their sources, per registry/recipes.toml."""
+    from .build import build_asset, buildable, load_recipes, missing
+    from .core.registry import Registry
+
+    reg = Registry.load(_registry_root(args))
+    recipes = load_recipes(reg.root)
+    known = buildable(reg, recipes)
+
+    if args.list:
+        absent = set(missing(reg))
+        print(f"{len(known)} assets have a recipe:")
+        for a in known:
+            print(f"  {'MISSING' if a in absent else 'present'}  {a}")
+        no_recipe = [a for a in reg.assets if a not in recipes]
+        if no_recipe:
+            print()
+            print("No recipe (built with `lobemap stain`, then `lobemap tozarr`):")
+            for a in no_recipe:
+                print(f"  {a}")
+        return 0
+
+    if args.all:
+        wanted = [a for a in known if a in set(missing(reg))] if not             args.overwrite else known
+    else:
+        wanted = list(args.asset or ())
+    if not wanted:
+        print("nothing to build; --list shows what has a recipe")
+        return 0
+
+    failures = []
+    for i, asset in enumerate(wanted, start=1):
+        print(f"[{i}/{len(wanted)}] {asset}")
+        try:
+            result = build_asset(
+                reg, asset, recipes=recipes, overwrite=args.overwrite,
+                progress=lambda m: print(f"    {m}"),
+            )
+        except Exception as exc:                      # noqa: BLE001 - reported
+            print(f"    FAILED  {type(exc).__name__}: {exc}")
+            failures.append(asset)
+            continue
+        print(f"    wrote {result.path}  content_hash={result.content_hash}")
+
+    print()
+    print(f"{len(wanted) - len(failures)}/{len(wanted)} built")
+    if failures:
+        print(f"failed: {', '.join(failures)}")
+    return 1 if failures else 0
 
 
 def cmd_view(args) -> int:
@@ -736,6 +862,9 @@ def main(argv: list[str] | None = None) -> int:
     mn.add_argument("--base-url", default=None,
                     help="where the artifacts will be published")
     mn.add_argument("--output", default=None, help="default: <registry>/manifest.toml")
+    mn.add_argument("--prune", action="store_true",
+                    help="drop records for artifacts not on disk instead of "
+                         "keeping them")
     mn.set_defaults(func=cmd_manifest)
 
     ft = sub.add_parser("fetch", help="download or verify data artifacts")
@@ -745,6 +874,16 @@ def main(argv: list[str] | None = None) -> int:
     ft.add_argument("--check", action="store_true",
                     help="verify what is present and exit; download nothing")
     ft.set_defaults(func=cmd_fetch)
+
+    bd = sub.add_parser("build", help="derive built assets from their sources")
+    bd.add_argument("asset", nargs="*", help="asset ids; omit with --all")
+    bd.add_argument("--all", action="store_true",
+                    help="build every asset with a recipe that is missing")
+    bd.add_argument("--list", action="store_true",
+                    help="show which assets have a recipe, and their state")
+    bd.add_argument("--overwrite", action="store_true",
+                    help="rebuild even if the file is already there")
+    bd.set_defaults(func=cmd_build)
 
     v = sub.add_parser("view", help="open a scene for a coordinate space")
     v.add_argument("space", nargs="?", help="space id (omit if --scene is given)")

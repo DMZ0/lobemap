@@ -10,10 +10,23 @@ dist/
 cache/
 data/cache/
 
-# Ingested assets are rebuildable from source; caches are fetched, not shipped.
-registry/data/*.npz
-# Sidecar arrays for legacy npz volumes too large to compress (tens of GB).
-registry/data/*.npy
-# OME-Zarr stores are directories, and are rebuildable like everything here.
-registry/data/*.zarr/
+# Built assets. Everything under registry/data is derived, but the rule is
+# split by SIZE rather than by provenance: the twelve small ones total 47 MB
+# and are tracked, so a clone can open every scene without building anything
+# first. Only the three virtual stains are excluded, and they are 2.32 GB --
+# 98.5% of the total -- regenerated often enough that each rebuild would add
+# another permanent copy to a history that cannot delta-compress them.
+#
+# Named individually rather than by pattern: a `*.zarr/` rule with negations
+# for the exceptions is easy to get subtly wrong, and getting it wrong here
+# means either committing gigabytes or silently shipping nothing.
+registry/data/fafb_stain.zarr/
+registry/data/hemibrain_stain.zarr/
+registry/data/malecns_stain.zarr/
+# `stain` writes an npz plus a sidecar array before `tozarr` converts it.
+registry/data/*_stain.npz
+registry/data/*.data.npy
+# Scratch: slab spill for the stain build, downloaded sources, zip staging.
 registry/data/.stainwork/
+registry/data/.build/
+registry/data/.manifest/

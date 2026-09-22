@@ -40,6 +40,49 @@ def _tag(meshset) -> str:
     return " [" + ", ".join(bits) + "]"
 
 
+class MissingAssets(RuntimeError):
+    """Nothing in this space is built yet, said usefully.
+
+    This used to be a bare RuntimeError telling the reader to run
+    `lobemap ingest ...`, with the ellipsis literal. `ingest` has subcommands
+    for two pipelines only, so for most assets that was not a command anyone
+    could run, and it arrived at the end of a twenty-line traceback. The
+    first thing a new user saw was a crash whose advice did not work.
+    """
+
+    def __init__(self, space: str, registry) -> None:
+        self.space = space
+        self.assets = [
+            a for a in registry.assets_in_space(space) if not a.path.exists()
+        ]
+        super().__init__(self._message(registry))
+
+    def _message(self, registry) -> str:
+        from ..build import load_recipes
+
+        recipes = load_recipes(registry.root)
+        lines = [
+            (f"No data for space {self.space!r}: {len(self.assets)} of its "
+             f"assets are not built yet."),
+            "",
+        ]
+        for asset in self.assets:
+            how = ("lobemap build " + asset.id) if asset.id in recipes                 else "lobemap stain  (see registry/data/README.md)"
+            lines.append(f"  {asset.id:32s} {how}")
+        have_recipe = [a.id for a in self.assets if a.id in recipes]
+        lines += ["", "Build everything that has a recipe:", "",
+                  "  lobemap build --all"]
+        if len(have_recipe) < len(self.assets):
+            lines += [
+                "",
+                "The virtual stains are not in that set: they need ~19 GB of",
+                "synapse downloads, ~40 GB of scratch and hours of compute.",
+            ]
+        lines += ["", "Or fetch prebuilt data once a base_url is published:",
+                  "", "  lobemap fetch"]
+        return chr(10).join(lines)
+
+
 def build_scene(
     viewer,
     registry: Registry,
@@ -92,10 +135,7 @@ def build_scene(
         )
 
     if not surfaces:
-        raise RuntimeError(
-            f"space {space!r} has no ingested assets yet. Run "
-            f"`lobemap ingest ...` first."
-        )
+        raise MissingAssets(space, registry)
 
     # After the atlases, because the colours are read out of their Surface
     # layers rather than recomputed.
@@ -801,6 +841,7 @@ __all__ = [
     "BASE_DISPLAY",
     "GIMBAL_NUDGE_DEG",
     "ROLE_DISPLAY",
+    "MissingAssets",
     "SceneSession",
     "apply_scene",
     "build_scene",

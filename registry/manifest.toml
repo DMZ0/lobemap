@@ -8,20 +8,20 @@ version = 1
 [artifacts.bates2020_glomeruli]
 path = "bates2020_glomeruli.npz"
 kind = "file"
-sha256 = "972ab8102a57ea5a0513b2da7bd96b84eb881ae1acecb8df0bd4831be9e6c0d7"
+sha256 = "8d8b53eb65d122f75740808af609b75b561fac468447cbf42d5a6cc6ae379d2d"
 size = 2857138
 
 [artifacts.benton2025_glomeruli]
 path = "benton2025_glomeruli.npz"
 kind = "file"
-sha256 = "bc36e4b62e740136826eedc41193173fca66a589de038ca5e07c2d70fdee5fe6"
-size = 2576869
+sha256 = "c31a1450cbfc1578770c424bcc448e5fa15c46f5725f4f678b673da6c8f3e4e5"
+size = 2576868
 
 [artifacts.fafb_neuropil]
 path = "fafb_neuropil.npz"
 kind = "file"
-sha256 = "7d65ce05b4a98e87679f39975487bdcce0669f1eddb55cf6a609797251ed4563"
-size = 922848
+sha256 = "6a09c8bd13599b6f35e647562396afe9d4cf723ee86d32e80bcaf8d1a63ffb62"
+size = 922845
 
 [artifacts.fafb_stain]
 path = "fafb_stain.zarr"
@@ -32,20 +32,20 @@ size = 913057461
 [artifacts.grabe2015_glomeruli]
 path = "grabe2015_glomeruli.npz"
 kind = "file"
-sha256 = "d9254ff06004a8158c360eebabc4d291f182e9cee3a35cc50e6a7be38fbb898e"
+sha256 = "e721f6d2e6ab1048cae55e2169acef347e1f5772d538847a72c3256189542745"
 size = 9972938
 
 [artifacts.grabe2015_labels]
 path = "grabe2015_labels.npz"
 kind = "file"
-sha256 = "d963bd1e7ef1d711998c6569cb3ac85220b151fcdc600ad7a07f6916dfd9a7ca"
-size = 362009
+sha256 = "8b299c5996895cef9d50cfd1a7fd0757edbfb8124357bf2be2770bf4b469e884"
+size = 283953
 
 [artifacts.grabe2015_stack]
-path = "grabe2015_stack.zarr"
-kind = "dir"
-sha256 = "c179b05b3907cb9d2d86a4a2490f91a1e135e8919a6bf9ec8e9fcbec5de1a055"
-size = 18603571
+path = "grabe2015_stack.npz"
+kind = "file"
+sha256 = "65533327c8a4b204495c1d8cf40b0482ff8f849d9fc4b58168a3c18a87d111e7"
+size = 15002575
 
 [artifacts.hemibrain_stain]
 path = "hemibrain_stain.zarr"
@@ -62,35 +62,35 @@ size = 1108619268
 [artifacts.neuprint_cns_glomeruli]
 path = "neuprint_cns_glomeruli.npz"
 kind = "file"
-sha256 = "0302c64d7b2774208fec1bcf316c3520f3298cc1c008656b044510314c128df6"
-size = 3231688
+sha256 = "173da17f5d2e3a2dba70e76df5707896740a0da7945dd399da81e6ca3ed8b6ed"
+size = 3231820
 
 [artifacts.neuprint_cns_neuropil]
 path = "neuprint_cns_neuropil.npz"
 kind = "file"
-sha256 = "a375093f807eecad015cb2a3bb8ee7b8fae347e70fe3c16f95bd07fd180f143e"
-size = 290105
+sha256 = "6625cf86d73dda0d3330c831656946ea2346bce648bea75521fbc2d338608601"
+size = 290119
 
 [artifacts.neuprint_hemibrain_glomeruli]
 path = "neuprint_hemibrain_glomeruli.npz"
 kind = "file"
-sha256 = "a7e6d1becae1e96df49382f8003982a61b53c8a993540bf8d4eccc5fdb3f3903"
-size = 2881955
+sha256 = "d5f3eeb81455cb759e4d82ff63f0c86796dcb519c703fdb247e679d6c50ca8bc"
+size = 2881901
 
 [artifacts.neuprint_hemibrain_neuropil]
 path = "neuprint_hemibrain_neuropil.npz"
 kind = "file"
-sha256 = "9a09d5d812e08a5dfa0eed546c3cedc8ef8125e820687d4930dff19ab85f3342"
+sha256 = "8ed70167d47a3e1eb2862be0a83ed7bf8b12d417919f28bc1c5f50e2d8ac7e58"
 size = 1043816
 
 [artifacts.schlegel2021_s11_glomeruli]
 path = "schlegel2021_s11.npz"
 kind = "file"
-sha256 = "2c86f4d478fef765454ac00f63e2b761a18855d0a7f3962377c915671e31521c"
-size = 3872463
+sha256 = "5fffa796245fb24579693a3239aeff92c51facf009245b6cd1ddf0fc90831ff5"
+size = 3872479
 
 [artifacts.schlegel2021_s12_glomeruli]
 path = "schlegel2021_s12.npz"
 kind = "file"
-sha256 = "1d87e73c6327b87daf2877aaa9b79f91b570b9afdcac9fd9e789799a5faacab4"
-size = 2648608
+sha256 = "cc37c03ffdbd207c62aafe02d7fec6567aac729a62e394c9beb2fad6027dc00f"
+size = 2648623
