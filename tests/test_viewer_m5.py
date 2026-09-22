@@ -159,3 +159,82 @@ def test_apply_scene_restricts_compartments(registry, viewer):
     assert names and all("DA1" in n.upper() for n in names)
     # A layer absent from the preset is hidden.
     assert not surfaces["neuprint_hemibrain_neuropil"].layer.visible
+
+
+def test_contours_and_labels_take_their_mesh_colour(registry):
+    """A glomerulus is one colour, in 3D and in 2D and on its label.
+
+    Colouring per atlas meant every outline in a scene shared one hue, so a
+    slice said which atlas a shape came from but not which glomerulus --
+    while the mesh of that same glomerulus was already colour-coded by
+    canonical name.
+    """
+    import numpy as np
+
+    napari = pytest.importorskip("napari")
+    from lobemap.viewer.app import build_scene, install_display_mode
+
+    viewer = napari.Viewer(show=False, ndisplay=3)
+    try:
+        surfaces, contours = build_scene(viewer, registry, "GRABE")
+        images = [
+            layer for layer in viewer.layers
+            if layer.metadata.get("lobemap", {}).get("kind")
+            in ("image", "labels")
+        ]
+        install_display_mode(viewer, surfaces, contours, images)
+        viewer.dims.ndisplay = 2
+
+        overlay, surface = contours["grabe2015"], surfaces["grabe2015"]
+        axis = overlay.axis
+        mid = float(np.percentile(overlay.meshset.vertices[:, axis], 50))
+        viewer.dims.set_point(axis, mid)
+        overlay.set_labels(set(overlay.selection))
+        overlay.refresh()
+
+        owners = overlay._shape_index
+        assert len(owners) > 10, "no cross-sections to check"
+
+        edges = np.asarray(overlay.layer.edge_color)
+        for shape, owner in enumerate(owners):
+            np.testing.assert_allclose(
+                edges[shape][:3], surface.colors[owner][:3], atol=1e-2,
+                err_msg=f"{overlay.meshset.names[owner]} outline is not its "
+                        f"mesh colour",
+            )
+
+        # A bare list of colours is indistinguishable from one colour given
+        # component-wise, and napari collapses it to a constant. The
+        # encoding must survive as a per-shape array.
+        encoding = overlay.layer.text.color
+        array = np.asarray(getattr(encoding, "array", encoding))
+        assert array.shape == (len(owners), 4), (
+            f"label colours collapsed to {array.shape}; they are not per-shape"
+        )
+        for shape, owner in enumerate(owners):
+            np.testing.assert_allclose(
+                array[shape][:3], surface.colors[owner][:3], atol=1e-2,
+                err_msg=f"{overlay.meshset.names[owner]} label is not its "
+                        f"mesh colour",
+            )
+    finally:
+        viewer.close()
+
+
+def test_reference_shells_keep_one_colour(registry):
+    """Context geometry stays grey; colouring it would compete."""
+    napari = pytest.importorskip("napari")
+    from lobemap.viewer.app import REFERENCE_CONTOUR_COLOR, build_scene
+
+    # FAFB14, not GRABE: GRABE is an island space carrying only its own
+    # atlas, so it has no reference shell to check.
+    viewer = napari.Viewer(show=False, ndisplay=2)
+    try:
+        _surfaces, contours = build_scene(viewer, registry, "FAFB14")
+        shells = [c for name, c in contours.items() if name in registry.assets]
+        assert shells, "no reference geometry in this scene"
+        for shell in shells:
+            assert shell.colors is None
+            assert shell.color == REFERENCE_CONTOUR_COLOR
+    finally:
+        viewer.close()

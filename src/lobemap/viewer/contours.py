@@ -21,6 +21,9 @@ import numpy as np
 
 from ..core.meshfmt import MeshSet
 
+#: Slice-label point size. Was 7, which read as small against the contours.
+TEXT_SIZE = 10.5
+
 
 class ContourOverlay:
     """One Shapes layer per atlas, recomputed as the slice slider moves."""
@@ -34,6 +37,7 @@ class ContourOverlay:
         selection: set[int] | None = None,
         axis: int | None = None,
         width: float = 0.35,
+        colors=None,
     ) -> None:
         self.viewer = viewer
         self.meshset = meshset
@@ -43,6 +47,11 @@ class ContourOverlay:
         #: or three times over, so labels are opt-in per glomerulus.
         self.labels: set[int] = set()
         self.color = color
+        #: Per-compartment RGBA, taken from the Surface layer, so a
+        #: glomerulus outline and its label are the colour of its own mesh
+        #: rather than one colour for the whole atlas. None keeps `color`,
+        #: which is what the reference neuropil shells use.
+        self.colors = None if colors is None else np.asarray(colors, float)
         self._axis = axis
         self.width = width
         self.selection = set(
@@ -131,6 +140,21 @@ class ContourOverlay:
                 owners.append(index)
         return paths, owners
 
+    def _text_color(self, owners):
+        colors = self._colors_for(owners)
+        if colors is self.color:
+            return self.color
+        return {"array": colors, "default": self.color}
+
+    def _colors_for(self, owners):
+        """One RGBA per shape, from the compartment that shape came from."""
+        if self.colors is None:
+            return self.color
+        return [
+            self.colors[i] if 0 <= i < len(self.colors) else self.color
+            for i in owners
+        ]
+
     # -- updates ---------------------------------------------------------
 
     def refresh(self) -> None:
@@ -150,7 +174,7 @@ class ContourOverlay:
             self.layer.add(
                 paths,
                 shape_type="path",
-                edge_color=self.color,
+                edge_color=self._colors_for(owners),
                 edge_width=self.width,
             )
         # Text after data: napari requires one string per shape, so setting it
@@ -162,8 +186,16 @@ class ContourOverlay:
         try:
             self.layer.text = {
                 "string": strings,
-                "size": 7,
-                "color": self.color,
+                "size": TEXT_SIZE,
+                # One colour per shape, matching that glomerulus's mesh. A
+                # single colour for the layer would put every label in the
+                # atlas colour while the outline under it was its own.
+                #
+                # Spelled as ManualColorEncoding rather than a bare list:
+                # napari cannot tell a list of N colours from one colour
+                # given component-wise, and silently collapsed the list to a
+                # single constant -- `text.color` came back 0-dimensional.
+                "color": self._text_color(owners),
                 "anchor": "center",
             }
         except Exception as exc:      # noqa: BLE001 - never worth a crash

@@ -632,6 +632,10 @@ def _add_contours(viewer, registry, surfaces) -> dict[str, ContourOverlay]:
             color=REFERENCE_CONTOUR_COLOR if reference else next(palette),
             width=REFERENCE_CONTOUR_WIDTH if reference else 0.35,
             selection=set(surface.selection),
+            # The atlas palette, so an outline and its label match the mesh.
+            # Reference shells stay a single grey: they are context, and
+            # colouring each neuropil would compete with the glomeruli.
+            colors=None if reference else surface.colors,
         )
     # The overlays carry their own event handlers, so a scene switch can
     # disconnect them without build_scene having to hand them back.
