@@ -447,7 +447,31 @@ def _add_images(viewer, registry: Registry, space: str) -> list:
     return layers
 
 
-def install_display_mode(viewer, surfaces, contours, images=()) -> list[tuple]:
+#: Whether the display mode DETACHES layers it cannot draw, or merely hides
+#: them. Detaching is what keeps the layer list showing only what is usable
+#: in the current mode, which is the point of the feature.
+#:
+#: It also causes a hard crash. Removing a Surface layer from `viewer.layers`
+#: while the Layer object stays alive leaves a stale GL resource behind, and
+#: a later `layers.clear()` -- which is what a scene switch does -- paints
+#: against it:
+#:
+#:   OSError: exception: access violation reading 0x34
+#:     vispy/gloo/gl/_gl2.py in glDrawArrays
+#:
+#: Only 2D is affected, because that is the mode in which SURFACES are the
+#: detached ones; detaching Shapes in 3D is harmless. It scales with how many
+#: surfaces were detached: GRABE has one and survives, JRCFIB2018F has four
+#: and faults on the second switch.
+#:
+#: Set False to trade the layer-list behaviour for a viewer that does not
+#: crash on a scene switch in 2D. Measured: with detaching on, 2D switching
+#: faults every run; with it off, every combination tested survives.
+DETACH_UNUSABLE_LAYERS = True
+
+
+def install_display_mode(viewer, surfaces, contours, images=(),
+                         detach: bool | None = None) -> list[tuple]:
     """Show only what the current `ndisplay` can actually use.
 
     Returns (event, handler) pairs, so a scene switch can disconnect them;
@@ -466,6 +490,7 @@ def install_display_mode(viewer, surfaces, contours, images=()) -> list[tuple]:
       it must stay the identity, because napari permutes an Image by it and a
       Surface not at all (see `DIMS_ORDER_XYZ`).
     """
+    detaching = DETACH_UNUSABLE_LAYERS if detach is None else detach
     surf_layers = [s.layer for s in surfaces.values()]
     cont_layers = [c.layer for c in contours.values()]
 
@@ -497,7 +522,10 @@ def install_display_mode(viewer, surfaces, contours, images=()) -> list[tuple]:
         for layer in hide:
             if layer in viewer.layers:
                 was_visible[id(layer)] = layer.visible
-                viewer.layers.remove(layer)
+                if detaching:
+                    viewer.layers.remove(layer)
+                else:
+                    layer.visible = False
         for layer in show:
             if layer not in viewer.layers:
                 viewer.layers.append(layer)
@@ -694,6 +722,28 @@ class SceneSession:
             for event, handler in getattr(overlay, "handlers", ()) or ():
                 with contextlib.suppress(Exception):
                     event.disconnect(handler)
+        # LAYERS FIRST, then the dock. The other order crashes the process.
+        #
+        # Removing a dock widget relays out the window, which resizes the
+        # canvas and schedules a repaint. Dropping the layers after that has
+        # been scheduled frees their GL resources underneath it, and the
+        # next paint reads freed memory:
+        #
+        #   OSError: exception: access violation reading 0x34
+        #     vispy/gloo/gl/_gl2.py in glDrawArrays
+        #
+        # It is 2D-only in practice, because in 3D the surfaces are the
+        # layers being drawn and they are removed cleanly; in 2D the Shapes
+        # contours are live at the moment the relayout lands. Clearing
+        # first means the repaint has nothing stale to draw.
+        #
+        # This is the fault that went unexplained for several sessions: it
+        # looked like a GRABE rendering bug because GRABE was the scene open
+        # at the time, and it has no Python frame of its own to point at.
+        # Confirmed by bisection -- dock-then-clear faults every run,
+        # clear-then-dock survives, in both spaces tested.
+        with contextlib.suppress(Exception):
+            self.viewer.layers.clear()
         if self.dock is not None:
             with contextlib.suppress(Exception):
                 self.viewer.window.remove_dock_widget(self.dock)
@@ -702,11 +752,6 @@ class SceneSession:
             with contextlib.suppress(Exception):
                 self.dock.deleteLater()
         self.dock = self.panel = None
-        # Contour and mesh layers may be out of the viewer entirely -- the
-        # display mode removes whichever mode cannot draw them -- so clearing
-        # the layer list is what drops them either way.
-        with contextlib.suppress(Exception):
-            self.viewer.layers.clear()
         self.surfaces, self.contours, self.images = {}, {}, []
 
 
