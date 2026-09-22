@@ -170,21 +170,68 @@ def test_a_reference_image_is_visible_wherever_it_is_present(registry):
     except Exception as exc:                        # pragma: no cover
         pytest.skip(f"no Qt display: {exc}")
     try:
-        for scene_id, scene in registry.scenes.items():
+        for space_id in registry.spaces:
+            if not registry.atlases_in_space(space_id):
+                continue            # a bridging target, never opened
             viewer.layers.clear()
-            load_space(viewer, registry, scene.space, scene=scene_id,
-                       fit=False)
+            load_space(viewer, registry, space_id, fit=False)
             for layer in viewer.layers:
                 meta = layer.metadata.get("lobemap", {})
                 if meta.get("kind") == "image":
                     assert layer.visible, (
-                        f"{scene_id}: {layer.name} is present but hidden"
+                        f"{space_id}: {layer.name} is present but hidden"
                     )
                 elif meta.get("kind") == "labels":
                     # A segmentation of the glomeruli the meshes already
                     # draw: on by default would draw each one twice.
                     assert not layer.visible, (
-                        f"{scene_id}: {layer.name} should stay off"
+                        f"{space_id}: {layer.name} should stay off"
                     )
+    finally:
+        viewer.close()
+
+
+@pytest.mark.parametrize("ndisplay", [3, 2])
+def test_a_space_opens_showing_its_primary_atlas(registry, ndisplay):
+    """In 3D its mesh, in 2D its contours -- never nothing.
+
+    A regression guard on an ordering bug. `install_display_mode` applies
+    itself on installation, and in 2D its first act is to hide every
+    surface; it then reads each surface's visibility to decide which
+    contours to show. With the primary atlas set visible only at creation,
+    it had already been hidden by the time the hook looked, so 2D opened
+    with the stain and no glomeruli at all. Visibility is therefore
+    re-asserted after the hook, and this checks both modes because the
+    3D path never had the problem.
+    """
+    import napari
+
+    from lobemap.viewer.app import load_space
+
+    try:
+        viewer = napari.Viewer(show=False, ndisplay=ndisplay)
+    except Exception as exc:                        # pragma: no cover
+        pytest.skip(f"no Qt display: {exc}")
+    try:
+        for space_id in registry.spaces:
+            primary = registry.primary_atlas(space_id)
+            if primary is None:
+                continue
+            viewer.layers.clear()
+            load_space(viewer, registry, space_id, fit=False)
+            wanted = primary.title or primary.id
+            if ndisplay == 2:
+                wanted += " [contours]"
+            assert viewer.layers[wanted].visible, (
+                f"{space_id} in {ndisplay}D: {wanted} is off"
+            )
+            # And exactly one atlas is drawn, whatever the mode.
+            drawn = [
+                layer.name for layer in viewer.layers
+                if layer.visible and layer.name.removesuffix(" [contours]")
+                in {(registry.atlases[a].title or a)
+                    for a in registry.atlases}
+            ]
+            assert drawn == [wanted], (space_id, ndisplay, drawn)
     finally:
         viewer.close()

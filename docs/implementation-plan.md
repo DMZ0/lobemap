@@ -333,9 +333,11 @@ Notes from building it:
 - The contour layer is also what restores **2D identification**: `Surface._get_value`
   returns `None` in 2D, but `Shapes._get_value` returns a shape index, which maps back
   to a compartment through the per-path owner list.
-- Scene presets live in `registry/scenes.toml`. The five per-atlas presets are exactly
-  the viewers an atlas-centric design would have shipped, which was the original
-  argument for the space-centric one.
+- Scene presets lived in `registry/scenes.toml`: five of them, exactly the viewers an
+  atlas-centric design would have shipped, which was the original argument for the
+  space-centric one. Having made that argument they were removed -- a preset set
+  nothing but initial visibility, which `Space.primary_atlas` and per-role defaults
+  express without a second concept.
 
 ---
 

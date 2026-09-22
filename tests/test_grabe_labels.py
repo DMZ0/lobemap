@@ -63,12 +63,18 @@ def test_every_meshed_glomerulus_has_voxels_behind_it(reg):
     assert len(misses) <= 5, misses
 
 
-def test_the_scene_hides_the_masks_by_default(reg):
-    scene = reg.scenes[reg.spaces["GRABE"].default_scene]
-    specs = {layer.ref: layer for layer in scene.layers}
-    assert "grabe2015_labels" in specs
-    assert specs["grabe2015_labels"].visible is False
-    assert specs["grabe2015"].visible is True
+def test_the_masks_are_hidden_but_the_atlas_is_not(reg):
+    """The masks segment the same glomeruli the meshes draw."""
+    napari = pytest.importorskip("napari")
+    from lobemap.viewer.app import build_scene
+
+    viewer = napari.Viewer(ndisplay=3, show=False)
+    try:
+        surfaces, _ = build_scene(viewer, reg, "GRABE")
+        assert surfaces["grabe2015"].layer.visible
+        assert not viewer.layers["grabe2015_labels"].visible
+    finally:
+        viewer.close()
 
 
 def test_labels_become_a_napari_labels_layer(reg):

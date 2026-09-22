@@ -136,26 +136,34 @@ def test_table_filter_hides_rows(registry, scene):
     tab.filter.setText("")
 
 
-# -- scenes -------------------------------------------------------------
+# -- what a space opens with --------------------------------------------
 
 
-def test_scene_presets_reference_known_layers(registry):
-    """Every preset names real atlases/assets -- validated at load time too."""
-    assert registry.scenes, "no scenes defined"
-    for scene_def in registry.scenes.values():
-        assert scene_def.space in registry.spaces
-        for layer in scene_def.layers:
-            assert layer.ref in registry.atlases or layer.ref in registry.assets
+def test_only_the_primary_atlas_is_drawn(registry, viewer):
+    """Three parcellations of one volume, one of them on.
+
+    `build_scene` loads every atlas native to the space -- that is what
+    makes them superposable, and what the space-centric design is for --
+    so the others have to be loaded and switched off rather than left
+    out. This used to be decided by a named scene preset applied
+    afterwards; it is now the space's own `primary_atlas`.
+    """
+    from lobemap.viewer.app import build_scene
+
+    surfaces, _contours = build_scene(viewer, registry, "JRCFIB2018F")
+    for atlas in ("neuprint_hemibrain", "schlegel2021_s11",
+                  "schlegel2021_s12"):
+        assert atlas in surfaces, f"{atlas} was not loaded"
+    assert surfaces["neuprint_hemibrain"].layer.visible
+    assert not surfaces["schlegel2021_s11"].layer.visible
+    assert not surfaces["schlegel2021_s12"].layer.visible
 
 
-def test_apply_scene_restricts_compartments(registry, viewer):
-    from lobemap.viewer.app import apply_scene, build_scene
+def test_the_neuropil_shell_stays_off(registry, viewer):
+    """It is context, and it encloses everything worth looking at."""
+    from lobemap.viewer.app import build_scene
 
-    surfaces, contours = build_scene(viewer, registry, "JRCFIB2018F")
-    apply_scene(registry, "hemibrain_three_ways", surfaces, contours)
-    surface = surfaces["neuprint_hemibrain"]
-    assert surface.layer.visible
-    # A layer absent from the preset is hidden.
+    surfaces, _contours = build_scene(viewer, registry, "JRCFIB2018F")
     assert not surfaces["neuprint_hemibrain_neuropil"].layer.visible
 
 

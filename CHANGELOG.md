@@ -35,6 +35,8 @@
 - The "no data for this space" report leads with `lobemap fetch` rather than `lobemap build`.
 - Reference images are visible whenever they are on disk. They were created hidden and turned back on by each default scene preset, so the default only governed a scene that did not name its own image — `hemibrain_three_ways` opened with the stain off, which nobody had chosen. A preset can still turn one off. The Grabe label volume stays off: it is a segmentation of the glomeruli the meshes already draw.
 
+- Removed the scene concept. `registry/scenes.toml`, `Scene`, `LayerSpec`, `lobemap scenes` and `lobemap view --scene` are gone; a space is the unit the viewer opens. A scene was never a different view of the data — `build_scene` takes a space and loads every atlas native to it, and the preset was applied afterwards and set nothing but `.visible`, so two scenes on one space held identical layers. `spaces.toml` gains `primary_atlas`, replacing `default_scene`, and the rest follows from an asset's role. `lobemap spaces` now reports what each space opens with. The one preset not reproduced is `hemibrain_three_ways`, which is two clicks in the compartment panel.
+
 ### Fixes
 
 - Removed three `*_stain.progress.log` files committed by accident.

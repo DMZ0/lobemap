@@ -22,9 +22,7 @@ from .model import (
     Atlas,
     Compartment,
     Derivation,
-    LayerSpec,
     Provenance,
-    Scene,
     Space,
     axis_vector,
 )
@@ -81,7 +79,6 @@ class Registry:
         self.spaces: dict[str, Space] = {}
         self.assets: dict[str, Asset] = {}
         self.atlases: dict[str, Atlas] = {}
-        self.scenes: dict[str, Scene] = {}
         self.names = Nomenclature()
         self._meshes: dict[str, MeshSet] = {}
         self._volumes: dict[str, Volume] = {}
@@ -104,7 +101,6 @@ class Registry:
         r._load_assets()
         r.names = Nomenclature.load(r.root / "nomenclature.csv")
         r._load_atlases()
-        r._load_scenes()
         if validate:
             r.validate()
         return r
@@ -123,7 +119,7 @@ class Registry:
                 lateral_convention=body.get("lateral_convention", "biological"),
                 anterior=body.get("anterior"),
                 dorsal=body.get("dorsal"),
-                default_scene=body.get("default_scene"),
+                primary_atlas=body.get("primary_atlas"),
                 notes=body.get("notes", ""),
             )
 
@@ -207,27 +203,6 @@ class Registry:
             )
         return tuple(out)
 
-    def _load_scenes(self) -> None:
-        path = self.root / "scenes.toml"
-        if not path.exists():
-            return
-        for sid, body in _read_toml(path).items():
-            layers = tuple(
-                LayerSpec(
-                    ref=x["ref"],
-                    mirror=x.get("mirror", False),
-                    visible=x.get("visible", True),
-                    style=x.get("style", {}),
-                )
-                for x in body.get("layers", [])
-            )
-            self.scenes[sid] = Scene(
-                id=sid,
-                space=body["space"],
-                title=body.get("title", sid),
-                layers=layers,
-            )
-
     # -- access ----------------------------------------------------------
 
     def mesh(self, asset_id: str) -> MeshSet:
@@ -248,6 +223,26 @@ class Registry:
 
     def atlases_in_space(self, space: str) -> list[Atlas]:
         return [a for a in self.atlases.values() if a.native_space == space]
+
+    def primary_atlas(self, space: str) -> Atlas | None:
+        """The atlas a space opens with, or None if it has none at all.
+
+        Declared in `spaces.toml`, because with several atlases it is a
+        curatorial choice rather than something to derive -- JRCFIB2018F
+        has three and opens on the neuPrint one. Undeclared, the single
+        atlas of a one-atlas space is unambiguous, and beyond that the
+        first in registry order keeps the viewer deterministic while
+        `validate` reports the omission.
+        """
+        here = self.atlases_in_space(space)
+        if not here:
+            return None
+        declared = self.spaces[space].primary_atlas if space in self.spaces else None
+        if declared:
+            for atlas in here:
+                if atlas.id == declared:
+                    return atlas
+        return here[0]
 
     def assets_in_space(self, space: str, role: str | None = None) -> list[Asset]:
         return [
@@ -346,21 +341,19 @@ class Registry:
                     problems.append(
                         f"space {s.id!r}: {field}={spec!r} is not a signed axis"
                     )
-            if s.default_scene and s.default_scene not in self.scenes:
+            here = [a.id for a in self.atlases_in_space(s.id)]
+            if s.primary_atlas and s.primary_atlas not in here:
                 problems.append(
-                    f"space {s.id!r}: default_scene {s.default_scene!r} "
-                    f"is not a scene"
+                    f"space {s.id!r}: primary_atlas {s.primary_atlas!r} is "
+                    f"not one of its atlases ({', '.join(here) or 'none'})"
                 )
-
-        for sc in self.scenes.values():
-            if sc.space not in self.spaces:
-                problems.append(f"scene {sc.id!r}: unknown space {sc.space!r}")
-            for layer in sc.layers:
-                if layer.ref not in self.atlases and layer.ref not in self.assets:
-                    problems.append(
-                        f"scene {sc.id!r}: layer ref {layer.ref!r} is neither "
-                        "an atlas nor an asset"
-                    )
+            # Silence here would mean picking one arbitrarily and opening
+            # with a different atlas than the curator intended.
+            if not s.primary_atlas and len(here) > 1:
+                problems.append(
+                    f"space {s.id!r}: {len(here)} atlases and no "
+                    f"primary_atlas, so which one opens is arbitrary"
+                )
 
         if strict_templates:
             from . import spaces as sp

@@ -8,10 +8,12 @@ each from a different volume and each using its own names. lobemap puts them
 in one viewer so they can be looked at side by side: as 3D meshes, or as
 exact cross-sections on a slice through the underlying image.
 
-Scenes are organised by **coordinate space** rather than by atlas. A scene is
-a space — FAFB, the hemibrain, the male CNS, the Grabe light-microscopy
-template — and it holds every atlas native to that space at once, together
-with that space's neuropil geometry and reference images.
+The unit the viewer opens is a **coordinate space** — FAFB, the hemibrain,
+the male CNS, the Grabe light-microscopy template — not an atlas. A space
+holds every atlas native to it at once, together with that space's neuropil
+geometry and reference image. That is what lets two parcellations of the
+same volume be superposed: sharing a space is exactly the condition under
+which comparing them means anything.
 
 ## Installing
 
@@ -41,10 +43,11 @@ them, or name one to get it on its own.
 uv run lobemap view GRABE
 ```
 
-That opens the Grabe 2015 scene. To list what else is available:
+That opens the Grabe 2015 space. To list what else is available, and what
+each one will put on screen:
 
 ```bash
-uv run lobemap scenes
+uv run lobemap spaces
 ```
 
 ```bash
@@ -123,9 +126,13 @@ stamps the date it ran — but its *content* hash is, and the build prints it.
   in 2D and on its slice label.
 - The right-hand panel has a tab per atlas: a checkbox to show each
   glomerulus, and a second to write its name on the slice.
-- The control at the bottom right switches between scenes without
+- The control at the bottom right switches between spaces without
   restarting.
-- A scene's reference image — the virtual stain, or the Grabe confocal
+- A space with several atlases opens on one of them — `primary_atlas` in
+  `registry/spaces.toml` — with the rest loaded and switched off, since two
+  glomerular parcellations drawn on top of each other are unreadable. The
+  panel's tabs turn the others on.
+- A space's reference image — the virtual stain, or the Grabe confocal
   channel — is shown whenever it has been fetched. `--show` turns on a
   layer that is off, by asset id or by role, for example `--show
   neuropil`.
@@ -151,7 +158,8 @@ geometry (`reconcile`) and moving geometry between spaces (`bridge`).
 
 ## Documentation
 
-- [docs/design.md](docs/design.md) — why scenes are spaces, and the data model
+- [docs/design.md](docs/design.md) — why the viewer is organised around
+  spaces, and the data model
 - [docs/findings.md](docs/findings.md) — measurements, including the ones that
   overturned an assumption
 - [docs/data-sources.md](docs/data-sources.md) — where each dataset came from

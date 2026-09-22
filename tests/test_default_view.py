@@ -1,4 +1,4 @@
-"""The camera the GUI opens with, and the scene it opens with.
+"""The camera the GUI opens with, and the atlas it opens with.
 
 Anatomical axes differ between spaces -- hemibrain's antero-posterior axis is
 y where FAFB's is z -- so they are declared per space and measured, never
@@ -47,7 +47,7 @@ def test_declared_axes_match_what_was_measured():
     for space_id, (anterior, dorsal) in EXPECTED_AXES.items():
         space = reg.spaces[space_id]
         assert (space.anterior, space.dorsal) == (anterior, dorsal), space_id
-    assert reg.spaces["FAFB14"].default_scene == "benton2025"
+    assert reg.spaces["FAFB14"].primary_atlas == "benton2025"
 
 
 def test_axes_agree_with_positional_nomenclature():
@@ -139,7 +139,12 @@ def test_spaces_disagree_about_which_axis_is_anterior():
 
 
 def test_every_space_opens_with_exactly_one_atlas_and_its_image():
-    """Two atlases stacked at startup is unreadable; that is the whole point."""
+    """Two atlases stacked at startup is unreadable; that is the whole point.
+
+    This used to read the answer out of a scene preset. There is no preset
+    now: the space names its primary atlas, and the image comes along
+    because an image is shown whenever it is on disk.
+    """
     reg = Registry.load(REGISTRY)
     expected = {
         "FAFB14": ("benton2025", "fafb_stain"),
@@ -148,14 +153,11 @@ def test_every_space_opens_with_exactly_one_atlas_and_its_image():
         "GRABE": ("grabe2015", "grabe2015_stack"),
     }
     for space_id, (atlas, image) in expected.items():
-        space = reg.spaces[space_id]
-        assert space.default_scene, f"{space_id} has no default scene"
-        scene = reg.scenes[space.default_scene]
-        assert scene.space == space_id
-        visible = {layer.ref for layer in scene.layers if layer.visible}
-        shown_atlases = visible & set(reg.atlases)
-        assert shown_atlases == {atlas}, (space_id, shown_atlases)
-        assert image in visible, (space_id, visible)
+        primary = reg.primary_atlas(space_id)
+        assert primary is not None and primary.id == atlas, space_id
+        images = [a.id for a in reg.assets_in_space(space_id)
+                  if a.kind == "image"]
+        assert images == [image], (space_id, images)
 
 
 def test_every_space_with_an_atlas_declares_both_axes():
@@ -171,10 +173,24 @@ def test_spaces_with_an_atlas_all_declare_a_default():
     reg = Registry.load(REGISTRY)
     for space_id, space in reg.spaces.items():
         if reg.atlases_in_space(space_id):
-            assert space.default_scene, f"{space_id} has atlases but no default"
+            assert space.primary_atlas, f"{space_id} has atlases but no primary"
 
 
-def test_registry_rejects_a_bad_axis_or_missing_default_scene():
+def test_the_other_atlases_of_a_space_are_still_loaded():
+    """Not shown is not the same as not there.
+
+    JRCFIB2018F is the case the whole design exists for: three
+    parcellations of one volume, superposable because they share a space.
+    Opening on one of them must not mean the other two are absent.
+    """
+    reg = Registry.load(REGISTRY)
+    here = {a.id for a in reg.atlases_in_space("JRCFIB2018F")}
+    assert here == {"neuprint_hemibrain", "schlegel2021_s11",
+                    "schlegel2021_s12"}
+    assert reg.primary_atlas("JRCFIB2018F").id == "neuprint_hemibrain"
+
+
+def test_registry_rejects_a_bad_axis_or_primary_atlas():
     from lobemap.core.registry import RegistryError
 
     reg = Registry.load(REGISTRY, validate=False)
@@ -185,8 +201,21 @@ def test_registry_rejects_a_bad_axis_or_missing_default_scene():
 
     reg = Registry.load(REGISTRY, validate=False)
     reg.spaces["FAFB14"] = Space(id="FAFB14", title="x", units="um",
-                                 default_scene="no_such_scene")
-    with pytest.raises(RegistryError, match="no_such_scene"):
+                                 primary_atlas="no_such_atlas")
+    with pytest.raises(RegistryError, match="no_such_atlas"):
+        reg.validate()
+
+
+def test_several_atlases_and_no_primary_is_a_registry_error():
+    """Otherwise the viewer picks one and the choice is invisible."""
+    from dataclasses import replace
+
+    from lobemap.core.registry import RegistryError
+
+    reg = Registry.load(REGISTRY, validate=False)
+    reg.spaces["JRCFIB2018F"] = replace(reg.spaces["JRCFIB2018F"],
+                                        primary_atlas=None)
+    with pytest.raises(RegistryError, match="no primary_atlas"):
         reg.validate()
 
 
@@ -310,15 +339,10 @@ def test_fit_view_keeps_the_orientation(viewer):
     assert cam.zoom > 0
 
 
-def test_apply_scene_controls_image_visibility(viewer):
-    """Images start hidden, so a scene has to be able to turn one on."""
-    from lobemap.viewer.app import apply_scene
-
+def test_a_space_with_no_atlases_has_no_primary():
+    """JRC2018U is a bridging target, never opened."""
     reg = Registry.load(REGISTRY)
-    layer = viewer.add_image(np.zeros((4, 4, 4), np.uint8), name="fafb_stain",
-                             visible=False)
-    apply_scene(reg, "benton2025", {}, {}, [layer])
-    assert layer.visible is True
+    assert reg.primary_atlas("JRC2018U") is None
 
 
 def test_the_initial_fit_follows_the_canvas(viewer):

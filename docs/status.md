@@ -74,7 +74,7 @@ src/lobemap/
                     nomenclature, bridge, repair, stain, tozarr,
                     manifest, fetch, build, ingest {neuprint}
 registry/
-  spaces.toml assets.toml atlases/*.toml scenes.toml nomenclature.csv
+  spaces.toml assets.toml atlases/*.toml nomenclature.csv
   recipes.toml manifest.toml
   data/           ingested .npz (meshes) and .zarr (volumes),
                   gitignored and rebuildable
@@ -127,11 +127,17 @@ building.
 
 ### Viewer defaults
 
-Every space with an atlas names a `default_scene`, which `lobemap view
-<space>` applies: **one** atlas plus that space's reference image, rather
-than every atlas stacked on top of each other. FAFB opens on Benton,
-hemibrain on neuPrint hemibrain, male CNS on neuPrint male CNS, Grabe on
-Grabe with its confocal channel in place of a stain.
+Every space with an atlas names a `primary_atlas`, and `lobemap view
+<space>` draws that one plus the space's reference image, rather than every
+atlas stacked on top of each other. FAFB opens on Benton, hemibrain on
+neuPrint hemibrain, male CNS on neuPrint male CNS, Grabe on Grabe with its
+confocal channel in place of a stain. The others are loaded and switched
+off, a checkbox away in the compartment panel.
+
+This used to be expressed as a named scene preset in `scenes.toml`, one per
+space plus a three-atlas hemibrain comparison. The presets are gone: see
+"no `Scene`" in docs/design.md for why an entity that only set initial
+visibility was not worth being a second concept beside the space.
 
 Image display is per role (`viewer.app.ROLE_DISPLAY`), with `colormap`
 overridable per asset in `assets.toml`. A virtual stain gets magenta,

@@ -152,12 +152,23 @@ class Atlas:
     compartments: tuple[Compartment, ...]
     parent: str | None               # set when this atlas revises another (Benton -> Bates)
 
-@dataclass(frozen=True)
-class Scene:                         # what the atlas-centric design called "a viewer"
-    id: str
-    space: str
-    layers: tuple[LayerSpec, ...]    # asset/atlas id, mirror, style, initial visibility
 ```
+
+There is deliberately no `Scene`. One existed: a named set of layers, each
+with its own `visible`, `mirror` and `style`, which `lobemap view --scene`
+selected. It was removed because a scene was never a different view of the
+data. `build_scene` takes a SPACE and loads every atlas native to it; the
+preset was applied afterwards and set nothing but `.visible`, so two
+scenes on one space held identical layers and differed only in which boxes
+started ticked. `mirror` and `style` were never used by any scene in the
+registry, and the in-viewer switcher enumerated spaces, so the one scene
+that justified the concept -- three hemibrain atlases at once -- was
+unreachable from the UI meant to expose it.
+
+What survives is `Space.primary_atlas` plus visibility keyed on an asset's
+role: primary atlas on, other atlases loaded and off, neuropil off, image
+on when it is on disk, label volume off. That reproduces every preset the
+registry had.
 
 Resolution is a single cached function:
 

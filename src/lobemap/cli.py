@@ -564,7 +564,7 @@ def cmd_validate(args) -> int:
         return 1
     print(
         f"ok: {len(reg.spaces)} spaces, {len(reg.assets)} assets, "
-        f"{len(reg.atlases)} atlases, {len(reg.scenes)} scenes"
+        f"{len(reg.atlases)} atlases"
     )
     for a in reg.atlases.values():
         print(f"  {a.id:<22} {a.native_space:<14} {len(a.compartments):>3} compartments")
@@ -599,6 +599,23 @@ def cmd_spaces(args) -> int:
         data = f"{here}/{len(assets)} assets built" if assets else "no assets"
         print(f"  {s.id:<14} {s.units:<3} {tmpl:<16}{ok}  "
               f"{n_at} atlas(es)  {data}")
+        # What `lobemap view <space>` will actually put on screen. This is
+        # what the separate `scenes` listing used to say, back when a named
+        # preset sat between a space and its layers.
+        primary = reg.primary_atlas(s.id)
+        if primary is None:
+            continue
+        others = [a.id for a in reg.atlases_in_space(s.id) if a.id != primary.id]
+        opens = [primary.id]
+        for asset in assets:
+            if asset.kind == "image":
+                opens.append(asset.id
+                             if asset.path.exists()
+                             else f"{asset.id} (not fetched)")
+        line = f"opens with: {', '.join(opens)}"
+        if others:
+            line += f"; also loaded: {', '.join(others)}"
+        print(f"  {'':<14} {'':<3} {'':<16}  {line}")
     if absent_total:
         print()
         print(f"{absent_total} declared asset(s) are not on disk. "
@@ -948,28 +965,6 @@ def cmd_repair(args) -> int:
     return rc
 
 
-def cmd_scenes(args) -> int:
-    from .core.registry import Registry
-
-    reg = Registry.load(_registry_root(args), validate=False)
-    if not reg.scenes:
-        print("no scenes defined")
-        return 0
-    # A scene naming a layer whose asset is not built cannot open as
-    # described. Listing them all as though they can is the same readiness
-    # claim `spaces` used to make.
-    for scene in reg.scenes.values():
-        layers = [layer.ref for layer in scene.layers if layer.visible]
-        absent = [
-            ref for ref in layers
-            if ref in reg.assets and not reg.assets[ref].path.exists()
-        ]
-        mark = "" if not absent else f"  [needs {', '.join(absent)}]"
-        print(f"  {scene.id:<26} {scene.space:<13} {scene.title}{mark}")
-        print(f"  {'':<26} {'':<13} layers: {', '.join(layers)}")
-    return 0
-
-
 def cmd_build(args) -> int:
     """Derive built assets from their sources, per registry/recipes.toml."""
     from .build import build_asset, buildable, load_recipes, missing
@@ -1070,7 +1065,6 @@ def cmd_view(args) -> int:
         root,
         args.space,
         ndisplay=args.ndisplay,
-        scene=args.scene,
         # `--show` was parsed and then never forwarded, so it silently did
         # nothing: layers start hidden, and asking for one by name was the
         # documented way to see it.
@@ -1131,17 +1125,13 @@ def main(argv: list[str] | None = None) -> int:
                     help="rebuild even if the file is already there")
     bd.set_defaults(func=cmd_build)
 
-    v = sub.add_parser("view", help="open a scene for a coordinate space")
-    v.add_argument("space", nargs="?", help="space id (omit if --scene is given)")
-    v.add_argument("--scene", help="named preset from registry/scenes.toml")
+    v = sub.add_parser("view", help="open a coordinate space")
+    v.add_argument("space", help="space id; `lobemap spaces` lists them")
     v.add_argument("--ndisplay", type=int, default=3, choices=(2, 3))
     v.add_argument("--show", action="append", metavar="LAYER",
                    help="start this layer visible; an asset id or a role "
                         "such as virtual_stain. Repeatable.")
     v.set_defaults(func=cmd_view)
-
-    sc = sub.add_parser("scenes", help="list named scene presets")
-    sc.set_defaults(func=cmd_scenes)
 
     val = sub.add_parser("validate", help="load and check the registry")
     val.add_argument("--strict", action="store_true",

@@ -159,6 +159,8 @@ def build_scene(
         _add_contours(viewer, registry, surfaces) if USE_SLICE_CONTOURS else {}
     )
 
+    show_primary_atlas(registry, space, surfaces, contours)
+
     # Anatomical names for the dimension sliders and napari's own axis
     # overlay. No layer of our own: see `viewer/axes.py`.
     label_viewer_axes(viewer, registry.spaces[space])
@@ -403,6 +405,33 @@ def level_for_3d(levels, max_voxels=VIEW3D_MAX_VOXELS, max_axis=VIEW3D_MAX_AXIS)
 
 def default_colormap(role: str) -> str:
     return ROLE_COLORMAP.get(role, DEFAULT_COLORMAP)
+
+
+def show_primary_atlas(registry: Registry, space: str, surfaces,
+                       contours=None) -> None:
+    """Draw the space's primary atlas and switch its siblings off.
+
+    Every atlas native to the space is loaded -- that is what makes them
+    superposable -- but two glomerular parcellations drawn on top of each
+    other are unreadable, so one opens.
+
+    This has to be callable a second time, AFTER `install_display_mode`.
+    That hook applies itself once on installation, and in 2D its first act
+    is to hide every surface; it then remembers each surface's visibility
+    to decide which contours to show. Set once at creation, the primary
+    atlas was already hidden by the time the hook looked, so it recorded
+    False and 2D opened with no contours at all -- an empty canvas but for
+    the stain. The old scene preset re-asserted visibility here for the
+    same reason.
+    """
+    primary = registry.primary_atlas(space)
+    for name, surface in surfaces.items():
+        if name not in registry.atlases:
+            continue            # a reference meshset: left as built
+        on = primary is not None and name == primary.id
+        surface.layer.visible = on
+        if contours and name in contours:
+            contours[name].layer.visible = on
 
 
 def _add_images(viewer, registry: Registry, space: str) -> list:
@@ -689,37 +718,6 @@ def install_picking(viewer, surfaces, contours, panel=None) -> None:
         overlay.layer.mouse_move_callbacks.append(_on_move)
 
 
-def apply_scene(registry: Registry, scene_id: str, surfaces, contours,
-                images=()) -> None:
-    """Apply a named preset: which layers are visible, and which compartments.
-
-    Image layers are included. They default to visible, so what a preset
-    adds is the ability to turn one OFF -- which `grabe2015` does for the
-    label volume, and which a scene wanting bare geometry would do for its
-    stain.
-    """
-    scene = registry.scenes[scene_id]
-    wanted = {layer.ref: layer for layer in scene.layers}
-    for layer in images:
-        spec = wanted.get(layer.name)
-        if spec is not None:
-            layer.visible = bool(spec.visible)
-    for name, surface in surfaces.items():
-        spec = wanted.get(name)
-        surface.layer.visible = bool(spec and spec.visible)
-        only = (spec.style or {}).get("compartments") if spec else None
-        if only:
-            keep = {
-                i for i, n in enumerate(surface.meshset.names)
-                if any(tok.lower() in n.lower() for tok in only)
-            }
-            surface.set_selection(keep)
-            if name in contours:
-                contours[name].set_selection(keep)
-        if name in contours:
-            contours[name].layer.visible = bool(spec and spec.visible)
-
-
 class SceneSession:
     """One loaded space, and everything needed to unload it again.
 
@@ -736,11 +734,10 @@ class SceneSession:
     swapped.
     """
 
-    def __init__(self, viewer, registry, space, scene=None):
+    def __init__(self, viewer, registry, space):
         self.viewer = viewer
         self.registry = registry
         self.space = space
-        self.scene = scene
         self.surfaces: dict = {}
         self.contours: dict = {}
         self.images: list = []
@@ -794,18 +791,16 @@ def load_space(
     viewer,
     registry: Registry,
     space: str,
-    scene: str | None = None,
     show: tuple[str, ...] = (),
     fit: bool = True,
 ) -> SceneSession:
     """Build a scene into a viewer that may already hold one.
 
-    The ordering here is load-bearing and is the same as the original
-    `run`: the scene preset is applied AFTER the display mode, because that
-    hook adds and removes layers and restores remembered visibility, so
-    running it first lets it overwrite what the preset just set.
+    Ordering is load-bearing: `--show` runs AFTER the display-mode hook,
+    which adds and removes layers and restores remembered visibility, so
+    running it first would let the hook overwrite what was just asked for.
     """
-    session = SceneSession(viewer, registry, space, scene)
+    session = SceneSession(viewer, registry, space)
     surfaces, contours = build_scene(viewer, registry, space)
     session.surfaces, session.contours = surfaces, contours
 
@@ -828,17 +823,15 @@ def load_space(
     ) or []
     enforce_display_mode = session.handlers[0][1] if session.handlers else None
 
-    if scene is None:
-        scene = registry.spaces[space].default_scene
-    session.scene = scene
-    if scene:
-        apply_scene(registry, scene, surfaces, contours, session.images)
+    # Again, now that the display-mode hook has run and consumed the
+    # visibility it found. See `show_primary_atlas`.
+    show_primary_atlas(registry, space, surfaces, contours)
     if show:
         _show_layers(viewer, show)
 
-    # AFTER the preset and --show, both of which set visibility without
-    # knowing the display mode: a preset naming an atlas would otherwise
-    # turn its mesh on while the viewer is in 2D, where it cannot be read.
+    # AFTER --show, which sets visibility without knowing the display mode:
+    # naming an atlas would otherwise turn its mesh on while the viewer is
+    # in 2D, where it cannot be read.
     if enforce_display_mode is not None:
         enforce_display_mode()
 
@@ -852,35 +845,22 @@ def run(
     registry_root,
     space: str | None = None,
     ndisplay: int = 3,
-    scene: str | None = None,
     show: tuple[str, ...] = (),
 ) -> None:
     import napari
 
     registry = Registry.load(registry_root)
-    if scene:
-        if scene not in registry.scenes:
-            raise KeyError(
-                f"unknown scene {scene!r}; known: {sorted(registry.scenes)}"
-            )
-        space = registry.scenes[scene].space
     if space is None:
-        raise ValueError("need a space or a scene")
+        raise ValueError("need a space")
 
-    viewer = napari.Viewer(title=f"lobemap - {scene or space}", ndisplay=ndisplay)
+    viewer = napari.Viewer(title=f"lobemap - {space}", ndisplay=ndisplay)
 
-    def _load(target: str, use_scene: str | None = None):
-        session = load_space(
-            viewer, registry, target,
-            scene=use_scene,
-            show=show,
-        )
-        viewer.title = f"lobemap - {session.scene or session.space}"
+    def _load(target: str):
+        session = load_space(viewer, registry, target, show=show)
+        viewer.title = f"lobemap - {session.space}"
         return session
 
-    # The first scene may be named on the command line; later ones come from
-    # whatever the switcher picks, so they take their space's own default.
-    session = _load(space, scene)
+    session = _load(space)
 
     from .switcher import SpaceSwitcher
 
@@ -893,7 +873,7 @@ def run(
     # area with this underneath it -- the two are the scene's controls and
     # belong together, away from napari's own layer list on the left.
     switcher.dock = viewer.window.add_dock_widget(
-        switcher, area="right", name="Scene", tabify=False
+        switcher, area="right", name="Space", tabify=False
     )
     switcher.settle()
 
@@ -933,7 +913,6 @@ __all__ = [
     "ROLE_DISPLAY",
     "MissingAssets",
     "SceneSession",
-    "apply_scene",
     "build_scene",
     "display_for",
     "fit_view",
@@ -945,4 +924,5 @@ __all__ = [
     "maximize",
     "orient_anterior",
     "run",
+    "show_primary_atlas",
 ]

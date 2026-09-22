@@ -154,8 +154,11 @@ class Space:
     #: alone instead.
     anterior: str | None = None
     dorsal: str | None = None
-    #: Scene applied by `lobemap view <space>` when none is named.
-    default_scene: str | None = None
+    #: Which of this space's atlases is shown when it opens. The others
+    #: are loaded and listed, just switched off: a space holds every atlas
+    #: native to it, and two glomerular parcellations drawn on top of each
+    #: other are unreadable. Optional when the space has only one.
+    primary_atlas: str | None = None
     notes: str = ""
 
     @property
@@ -262,21 +265,14 @@ class Atlas:
         return None
 
 
-@dataclass(frozen=True)
-class LayerSpec:
-    """One layer in a scene: an atlas or a plain asset, optionally mirrored."""
-
-    ref: str
-    mirror: bool = False
-    visible: bool = True
-    style: Mapping[str, Any] = field(default_factory=dict)
-
-
-@dataclass(frozen=True)
-class Scene:
-    """What the atlas-centric design would have called 'a viewer'."""
-
-    id: str
-    space: str
-    title: str = ""
-    layers: tuple[LayerSpec, ...] = ()
+# `Scene` and `LayerSpec` used to live here: a named set of layers, each
+# with its own `visible`, `mirror` and `style`. They were removed because a
+# scene was never a different view of the data. `build_scene` takes a SPACE
+# and loads every atlas native to it; the scene was applied afterwards and
+# set nothing but `.visible`, so two scenes on one space held identical
+# layers and differed only in which boxes started ticked. `mirror` and
+# `style` were never used by any scene in the registry.
+#
+# What remains of the idea is `Space.primary_atlas` plus visibility keyed on
+# an asset's ROLE, which reproduced every scene the registry had except
+# `hemibrain_three_ways` -- two clicks in the compartment panel.
