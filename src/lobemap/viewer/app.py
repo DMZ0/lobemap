@@ -697,6 +697,10 @@ class SceneSession:
         if self.dock is not None:
             with contextlib.suppress(Exception):
                 self.viewer.window.remove_dock_widget(self.dock)
+            # Removing it undocks it but leaves it a child of the window, so
+            # one QDockWidget accumulated per scene switch.
+            with contextlib.suppress(Exception):
+                self.dock.deleteLater()
         self.dock = self.panel = None
         # Contour and mesh layers may be out of the viewer entirely -- the
         # display mode removes whichever mode cannot draw them -- so clearing
@@ -805,7 +809,14 @@ def run(
     # Added ONCE and never torn down, unlike the compartment panel: it is the
     # control that does the switching, so it cannot be owned by the scene it
     # replaces.
-    viewer.window.add_dock_widget(switcher, area="left", name="Scene")
+    #
+    # Right, not left, and added AFTER the compartment panel so Qt splits the
+    # area with this underneath it -- the two are the scene's controls and
+    # belong together, away from napari's own layer list on the left.
+    switcher.dock = viewer.window.add_dock_widget(
+        switcher, area="right", name="Scene", tabify=False
+    )
+    switcher.settle()
 
     maximize(viewer)
     # Maximising is asynchronous, so the fit follows the canvas rather than

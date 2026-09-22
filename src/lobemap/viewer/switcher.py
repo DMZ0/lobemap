@@ -38,6 +38,9 @@ class SpaceSwitcher(QWidget):
         self.session = session
         self._load = load
         self._busy = False
+        #: This widget's own QDockWidget, set by whoever docks it. Needed to
+        #: re-assert the vertical order after a reload; see `settle`.
+        self.dock = None
 
         self.combo = QComboBox()
         for space_id in self.loadable_spaces(registry):
@@ -82,6 +85,26 @@ class SpaceSwitcher(QWidget):
                 out.append(space_id)
         return out
 
+    def settle(self) -> None:
+        """Sit below the compartment panel, however it was just re-added.
+
+        Loading a scene creates a NEW compartment panel and docks it, and Qt
+        puts a newly added dock above an existing one in the same area -- so
+        after one switch this control had jumped from the bottom of the right
+        column to the top of it, and stayed there. Re-splitting pins the
+        order rather than relying on insertion order.
+        """
+        panel = getattr(self.session, "dock", None)
+        if self.dock is None or panel is None:
+            return
+        window = getattr(self.viewer.window, "_qt_window", None)
+        if window is None:
+            return
+        with contextlib.suppress(Exception):
+            from qtpy.QtCore import Qt
+
+            window.splitDockWidget(panel, self.dock, Qt.Vertical)
+
     def _on_change(self, _index: int) -> None:
         want = self.combo.currentData()
         if self._busy or want is None or want == self.session.space:
@@ -94,6 +117,7 @@ class SpaceSwitcher(QWidget):
             self.status.setText(f"loading {want}...")
             self.session.teardown()
             self.session = self._load(want)
+            self.settle()
             self.status.setText("")
         except Exception as exc:                      # noqa: BLE001
             # A failed switch must not leave an empty viewer, so fall back to
