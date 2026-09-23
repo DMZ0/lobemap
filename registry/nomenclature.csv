@@ -57,7 +57,7 @@ benton2025,VP5,VP5,exact
 benton2025,VP1d,VP1d,exact
 benton2025,VP3,VP3,exact
 benton2025,VP2,VP2,exact
-grabe2015,VP1(L),VP1d;VP1l;VP1m,merge
+grabe2015,VP1(L),VP1,exact
 grabe2015,VP4(L),VP4,exact
 grabe2015,D(L),D,exact
 grabe2015,DA1(L),DA1,exact
@@ -108,7 +108,7 @@ grabe2015,VM5d(L),VM5d,exact
 grabe2015,VM5v(L),VM5v,exact
 grabe2015,VM7d(L),VM7d,exact
 grabe2015,VM7v(L),VM7v,exact
-grabe2015,VP1(R),VP1d;VP1l;VP1m,merge
+grabe2015,VP1(R),VP1,exact
 grabe2015,VP4(R),VP4,exact
 grabe2015,D(R),D,exact
 grabe2015,DA1(R),DA1,exact

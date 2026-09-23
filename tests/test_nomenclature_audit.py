@@ -4,8 +4,9 @@ It used to re-derive the whole table from the atlases and save it. A
 mechanical derivation can only emit identity relations -- published
 `AL-DA1(R)` maps to `DA1` -- so every curated merge, split and rename was
 replaced by an identity, and the information was gone with no warning. The
-file carries eight such rows: Grabe's VP1 merge, the Schlegel 2021 rename
-chain, and the VM6 three-way split.
+file carries six such rows: the Schlegel 2021 rename chain and the VM6
+three-way split, both in JRCFIB2018F, where three atlases share one
+vocabulary and it has to reconcile them.
 """
 
 from __future__ import annotations
@@ -89,6 +90,30 @@ def test_running_the_command_writes_nothing(tmp_path):
     )
 
 
+def test_a_single_atlas_space_has_nothing_to_reconcile():
+    """Its vocabulary IS its atlas, so every mapping is the identity.
+
+    Grabe's `VP1` used to map onto `VP1d;VP1l;VP1m` -- three names its own
+    geometry cannot tell apart, inherited from the global Benton-anchored
+    vocabulary that per-space vocabularies replaced. The other two
+    single-atlas spaces never had such a row.
+    """
+    from lobemap.core.names import parse_roi
+
+    reg = Registry.load(REGISTRY, validate=False)
+    for space in reg.spaces:
+        atlases = reg.atlases_in_space(space)
+        if len(atlases) != 1:
+            continue
+        published = {
+            parse_roi(c.published_name)[0] for c in atlases[0].compartments
+        }
+        assert set(reg.vocabulary(space)) == published, (
+            f"{space}: vocabulary and atlas disagree with no second atlas "
+            f"to reconcile against"
+        )
+
+
 def test_the_curated_relations_are_still_in_the_shipped_table():
     """A regression guard on the data, not the code.
 
@@ -100,11 +125,11 @@ def test_the_curated_relations_are_still_in_the_shipped_table():
     by_relation: dict[str, int] = {}
     for row in rows:
         by_relation[row["relation"]] = by_relation.get(row["relation"], 0) + 1
-    assert by_relation.get("merge") == 2, by_relation
     assert by_relation.get("renamed") == 3, by_relation
     assert by_relation.get("split") == 3, by_relation
+    assert by_relation.get("merge") is None, by_relation
 
-    merged = [r for r in rows if r["relation"] == "merge"]
-    assert all(";" in r["canonical"] for r in merged), (
-        "a merge must name more than one canonical glomerulus"
-    )
+    # Whatever the relation, naming several canonicals must mean a merge.
+    for row in rows:
+        if ";" in row["canonical"]:
+            assert row["relation"] == "merge", row

@@ -25,6 +25,7 @@
 
 ### Added
 
+- Grabe's `VP1` maps to `VP1` rather than to `VP1d;VP1l;VP1m`. GRABE has one atlas, so its vocabulary is that atlas and there is nothing to reconcile against; the merge was a survivor of the global Benton-anchored vocabulary that per-space vocabularies replaced, and it put three names into GRABE that its own geometry cannot tell apart. Its vocabulary is now 54 names, matching the atlas exactly, as the other two single-atlas spaces already did. The correspondence it recorded is cross-space and belongs to `lobemap reconcile`.
 - The `canonical` column appears only on atlases that disagree with their space's vocabulary somewhere, and a disagreeing entry is red. Three of the six atlases carry it: the Schlegel rename chain in hemibrain, the VM6 split in S11, Grabe's VP1 merge. Compared on the bare glomerulus, so `AL-DA1(R)` against `DA1` is agreement rather than 77 red rows.
 - The filter searches every text column, annotation included, and the placeholder says so — it named only name, canonical and side while already searching the rest.
 - The panel buttons sit in two aligned rows — `Filtered`, `Show all`, `Label all`, `Fill all` above `Invert`, `Show none`, `Label none`, `Fill none` — so each column pairs an action with its opposite. `All` and `None` are renamed `Show all` and `Show none`: they were named before `Label` and `Fill` had pairs of their own, and no longer said which of the three they acted on.

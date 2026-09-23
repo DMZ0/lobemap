@@ -395,7 +395,8 @@ def test_the_canonical_column_only_appears_where_it_says_something(registry):
         "JRCFIB2018F": {"neuprint_hemibrain": True, "schlegel2021_s11": True,
                         "schlegel2021_s12": False},
         "JRCFIB2022M": {"neuprint_cns": False},
-        "GRABE": {"grabe2015": True},
+        # One atlas, so its vocabulary is its own names: nothing to show.
+        "GRABE": {"grabe2015": False},
     }
     for space, wanted in expected.items():
         try:
