@@ -331,6 +331,48 @@ def fit_view(viewer, margin: float = 0.02) -> None:
         viewer.reset_view()
 
 
+def install_home_orientation(viewer, space) -> bool:
+    """Make the home button restore the anatomical view, not napari's.
+
+    `ViewerModel.reset_view` sets the camera angles to (0, 0, 0) before
+    fitting, which is a view down the ARRAY axes. Those are not the
+    anatomical ones -- antero-posterior is z in FAFB and y in the
+    hemibrain -- so "Reset view to original state" left the brain at an
+    arbitrary attitude, and the orientation `orient_anterior` sets at
+    load could not be got back without reopening the scene.
+
+    Wrapped on the viewer INSTANCE rather than on `ViewerModel`: the class
+    is shared by every viewer in the process, including the ones tests
+    make. The viewer is a pydantic model and refuses unknown attributes,
+    so the assignment goes through `object.__setattr__`; a bound method
+    found in the instance dict still wins over the class, which is what
+    makes the button -- verified -- go through this.
+
+    Re-orienting only when napari reset the angles, so `fit_view`, which
+    asks it not to, keeps preserving whatever the user is looking at.
+    """
+    existing = viewer.__dict__.get("reset_view")
+    if getattr(existing, "_lobemap_home", False):
+        # A scene switch: same wrapper, new space.
+        existing._lobemap_space = space
+        return True
+
+    original = type(viewer).reset_view.__get__(viewer)
+
+    def reset(*args, **kwargs):
+        original(*args, **kwargs)
+        if kwargs.get("reset_camera_angle", True):
+            orient_anterior(viewer, reset._lobemap_space)
+
+    reset._lobemap_home = True
+    reset._lobemap_space = space
+    try:
+        object.__setattr__(viewer, "reset_view", reset)
+    except Exception:                       # noqa: BLE001 - cosmetic
+        return False
+    return True
+
+
 def install_initial_fit(viewer, margin: float = 0.02) -> bool:
     """Keep refitting until the window settles, then stop at the first touch.
 
@@ -836,6 +878,7 @@ def load_space(
         enforce_display_mode()
 
     orient_anterior(viewer, registry.spaces[space])
+    install_home_orientation(viewer, registry.spaces[space])
     if fit:
         install_initial_fit(viewer)
     return session
@@ -917,6 +960,7 @@ __all__ = [
     "display_for",
     "fit_view",
     "install_display_mode",
+    "install_home_orientation",
     "install_initial_fit",
     "install_picking",
     "level_for_3d",

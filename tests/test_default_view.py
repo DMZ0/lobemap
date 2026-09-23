@@ -389,3 +389,103 @@ def test_the_initial_fit_survives_a_viewer_without_a_canvas():
     dummy = _Dummy()
     assert install_initial_fit(dummy) is False
     assert getattr(dummy, "reset", False) is True
+
+
+# -- the home button -----------------------------------------------------
+
+
+def _home(viewer):
+    viewer.window._qt_viewer.viewerButtons.resetViewButton.click()
+
+
+@pytest.mark.parametrize(
+    "space_id", ["FAFB14", "JRCFIB2018F", "JRCFIB2022M", "GRABE"]
+)
+def test_home_looks_down_a_p_with_dorsal_up(space_id):
+    """`reset_view` sets the camera angles to (0, 0, 0), a view down the
+    ARRAY axes. Those are not the anatomical ones, so the home button used
+    to leave the brain at an arbitrary attitude."""
+    napari = pytest.importorskip("napari")
+
+    from lobemap.core.registry import Registry
+    from lobemap.viewer.app import load_space
+
+    reg = Registry.load(REGISTRY)
+    if not (REGISTRY / "data").is_dir():
+        pytest.skip("no ingested data")
+    try:
+        viewer = napari.Viewer(show=False, ndisplay=3)
+    except Exception as exc:                        # pragma: no cover
+        pytest.skip(f"no Qt display: {exc}")
+    try:
+        load_space(viewer, reg, space_id, fit=True)
+        space = reg.spaces[space_id]
+        anterior = axis_vector(space.anterior)
+        dorsal = axis_vector(space.dorsal)
+
+        viewer.camera.angles = (17, 42, -63)        # the user rotates
+        _home(viewer)
+
+        view = np.asarray(viewer.camera.view_direction)
+        up = np.asarray(viewer.camera.up_direction)
+        # Looking POSTERIORLY means the view runs against anterior.
+        assert float(np.dot(view, anterior)) < -0.99, (space_id, view)
+        assert float(np.dot(up, dorsal)) > 0.99, (space_id, up)
+    finally:
+        viewer.close()
+
+
+def test_home_survives_a_scene_switch():
+    """The wrapper is installed once and re-pointed, not stacked."""
+    napari = pytest.importorskip("napari")
+
+    from lobemap.core.registry import Registry
+    from lobemap.viewer.app import load_space
+
+    reg = Registry.load(REGISTRY)
+    if not (REGISTRY / "data").is_dir():
+        pytest.skip("no ingested data")
+    try:
+        viewer = napari.Viewer(show=False, ndisplay=3)
+    except Exception as exc:                        # pragma: no cover
+        pytest.skip(f"no Qt display: {exc}")
+    try:
+        load_space(viewer, reg, "FAFB14", fit=False)
+        first = viewer.__dict__.get("reset_view")
+        viewer.layers.clear()
+        load_space(viewer, reg, "JRCFIB2018F", fit=False)
+        assert viewer.__dict__.get("reset_view") is first, "wrapper stacked"
+
+        viewer.camera.angles = (5, 5, 5)
+        _home(viewer)
+        anterior = axis_vector(reg.spaces["JRCFIB2018F"].anterior)
+        view = np.asarray(viewer.camera.view_direction)
+        assert float(np.dot(view, anterior)) < -0.99, (
+            "home re-oriented to the previous space"
+        )
+    finally:
+        viewer.close()
+
+
+def test_a_fit_that_keeps_the_angle_is_not_re_oriented():
+    """`fit_view` passes `reset_camera_angle=False` on purpose, so it must
+    leave whatever the user is looking at alone."""
+    napari = pytest.importorskip("napari")
+
+    from lobemap.core.registry import Registry
+    from lobemap.viewer.app import fit_view, load_space
+
+    reg = Registry.load(REGISTRY)
+    if not (REGISTRY / "data").is_dir():
+        pytest.skip("no ingested data")
+    try:
+        viewer = napari.Viewer(show=False, ndisplay=3)
+    except Exception as exc:                        # pragma: no cover
+        pytest.skip(f"no Qt display: {exc}")
+    try:
+        load_space(viewer, reg, "FAFB14", fit=False)
+        viewer.camera.angles = (17, 42, -63)
+        fit_view(viewer)
+        assert tuple(round(a) for a in viewer.camera.angles) == (17, 42, -63)
+    finally:
+        viewer.close()
