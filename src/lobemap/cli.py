@@ -1041,31 +1041,71 @@ def cmd_build(args) -> int:
     return 1 if failures else 0
 
 
-def cmd_view(args) -> int:
-    # A GUI crash here is native -- vispy, Qt or the GPU driver -- so Python
-    # exits on a signal with an empty log and nothing to go on. faulthandler
-    # costs nothing and turns that into a stack trace. Added after one such
-    # crash that could not be reproduced afterwards.
-    #
-    # It writes to its OWN unbuffered file rather than to stderr. Sending it
-    # to stderr lost the one crash it was added for: the process died partway
-    # through the write, so the report arrived as three interleaved
-    # "access violation" headers and a stack that stopped mid-filename,
-    # without the line number -- the single thing worth having. A raw fd with
-    # no buffering survives the signal, and all_threads matters because the
-    # faulting thread was not the main one.
+def _install_crash_log() -> None:
+    """Arm faulthandler for a native crash, and say nothing if none comes.
+
+    A GUI crash here is native -- vispy, Qt or the GPU driver -- so Python
+    dies on a signal with an empty log and nothing to go on. faulthandler
+    turns that into a stack trace, and it must write to its OWN unbuffered
+    file: sending it to stderr lost the one crash it was added for, because
+    the process died partway through the write. `all_threads` matters
+    because the fault came from a worker thread, not the main one.
+
+    What changed is the noise. It used to announce the path on every
+    launch and leave the file behind, so an ordinary run printed a line
+    about a crash that had not happened and dropped an empty file in the
+    temp directory -- 54 of them out of 55 launches here, against a single
+    real report. The net is worth keeping; the commentary is not. So: warn
+    only when something was actually written, and clean up when nothing
+    was.
+
+    A crash never reaches `atexit`, which is exactly why the report
+    survives one.
+    """
+    import atexit
     import faulthandler
+    import glob
     import tempfile
 
-    crash_log = os.environ.get("LOBEMAP_CRASH_LOG") or os.path.join(
-        tempfile.gettempdir(), f"lobemap-crash-{os.getpid()}.log"
-    )
-    with contextlib.suppress(Exception):
-        # Kept open for the life of the process on purpose: faulthandler
-        # writes to it from a signal handler, so it must not be closed.
-        handle = open(crash_log, "wb", buffering=0)  # noqa: SIM115
-        faulthandler.enable(file=handle, all_threads=True)
-        print(f"crash log: {crash_log}", flush=True)
+    explicit = os.environ.get("LOBEMAP_CRASH_LOG")
+    tmp = Path(tempfile.gettempdir())
+    path = Path(explicit) if explicit else tmp / f"lobemap-crash-{os.getpid()}.log"
+
+    # Sweep empties left by runs that were killed rather than exited --
+    # force-quitting the window skips atexit too. A log still held open by
+    # a live viewer cannot be unlinked on Windows, so those skip themselves.
+    if not explicit:
+        for old in glob.glob(str(tmp / "lobemap-crash-*.log")):
+            with contextlib.suppress(OSError):
+                if os.path.getsize(old) == 0:
+                    os.unlink(old)
+
+    try:
+        # Held open for the life of the process on purpose: faulthandler
+        # writes from a signal handler, so it must not be closed early.
+        handle = open(path, "wb", buffering=0)  # noqa: SIM115
+    except OSError:
+        return
+    faulthandler.enable(file=handle, all_threads=True)
+    if explicit:
+        # Asked for by name, so the caller wants to know where it is.
+        print(f"crash log: {path}", flush=True)
+
+    def _finish() -> None:
+        with contextlib.suppress(Exception):
+            faulthandler.disable()
+            handle.close()
+            size = path.stat().st_size if path.exists() else 0
+            if size:
+                print(f"a crash report was written to {path}", file=sys.stderr)
+            elif not explicit:
+                path.unlink()
+
+    atexit.register(_finish)
+
+
+def cmd_view(args) -> int:
+    _install_crash_log()
 
     # A fresh clone has no data: nothing runs on `uv sync`, so this is the
     # first opportunity to get it.

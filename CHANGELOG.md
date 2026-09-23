@@ -47,6 +47,7 @@
 
 ### Fixes
 
+- `lobemap view` no longer prints a `crash log: ...` line on every launch, and no longer leaves an empty log behind. faulthandler is still armed — a native vispy/Qt/driver fault would otherwise kill python with no trace — but it now reports only when something was written, deletes its file on a clean exit, and sweeps empties left by runs that were killed rather than exited. Measured before the change: 54 empty files out of 55 launches, against one real report. A log still held open by a live viewer cannot be unlinked, so those are skipped.
 - The anatomical axis indicator is drawn as a canvas overlay rather than a scene one, so it is visible in the default view of every space. A scene overlay sits at the world origin, which is not inside the data: FAFB spans x 192-853 um, so its indicator was ~190 um off-screen, and the male CNS showed part of one.
 - Removed three `*_stain.progress.log` files committed by accident.
 - A data release no longer starts a PyPI workflow run. It fired on every published release and failed at the tag check, mailing a failure for a release that was never meant to build a package.
