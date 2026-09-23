@@ -13,8 +13,14 @@ still resolve.
 | [`benton-2025/`](benton-2025/) | `benton2025_glomeruli` | 63 MB |
 | [`grabe-2015/`](grabe-2015/) | `grabe2015_glomeruli`, `grabe2015_labels`, `grabe2015_stack` | 97 MB |
 | [`bates-schlegel-2020/`](bates-schlegel-2020/) | nothing — kept for possible future use | 16 MB |
-| [`hemibrain/`](hemibrain/) | nothing — superseded by the live neuPrint query | 3.8 MB |
 | [`jrc2018unisex/`](jrc2018unisex/) | nothing — kept for possible future use | 39 MB |
+
+The hemibrain glomerulus surfaces exported from `hemibrainr` were here too,
+and were removed: the same 58 glomeruli come from the live neuPrint query,
+which resolves two of them further (`VC3l`/`VC3m` where the export had
+`VC3`). Three annotation tables went with them -- receptor, ligand and
+valence per glomerulus, and Virtual Fly Brain's FBbt terms. Those were not
+redundant with anything, only unused; they are on the `legacy` branch.
 
 Not every source is here. Some are downloaded at build time instead, because
 they are large or already have a stable public URL: the Schlegel 2021

@@ -485,9 +485,10 @@ open a scene: the viewer reads the canonical mesh format and the registry, and n
 access or a neuPrint token is needed only to rebuild caches. This also keeps the runtime
 free of CMTK (§3).
 
-Note that lobemap sourced its hemibrain surfaces through `hemibrainr`; the equivalent
-path here is `neuprint-python`, which also removes an R dependency from the rebuild
-pipeline.
+The viewer this replaced sourced its hemibrain surfaces through `hemibrainr`; the
+equivalent path here is `neuprint-python`, which also removes an R dependency from the
+rebuild pipeline. That export is no longer kept: it carried the same 58 glomeruli,
+and neuPrint resolves two of them further (`VC3l`/`VC3m` where the export had `VC3`).
 
 ---
 
