@@ -166,3 +166,88 @@ def test_annotation_columns_are_populated(tab):
     # Joined on the CANONICAL name: the published one here is `AL-DA1(R)`.
     da1 = next(v for k, v in got.items() if "DA1(" in k.upper())
     assert da1 == "Or67d", da1
+
+
+@pytest.fixture
+def fafb_tabs(registry):
+    """FAFB has both kinds of layer: one atlas and one neuropil set."""
+    import napari
+
+    from lobemap.viewer.app import build_scene
+    from lobemap.viewer.panel import CompartmentPanel
+
+    try:
+        viewer = napari.Viewer(show=False, ndisplay=3)
+    except Exception as exc:                        # pragma: no cover
+        pytest.skip(f"no Qt display: {exc}")
+    try:
+        surfaces, contours = build_scene(viewer, registry, "FAFB14")
+        # Bound to a name: an inline `CompartmentPanel(...).tabs` lets the
+        # panel be collected, and Qt then deletes the widgets underneath.
+        panel = CompartmentPanel(viewer, surfaces, registry=registry,
+                                 contours=contours)
+        yield panel.tabs
+    finally:
+        viewer.close()
+
+
+def _visible_headers(tab):
+    from lobemap.viewer.panel import COLUMNS
+
+    return [
+        tab.table.horizontalHeaderItem(i).text()
+        for i in range(len(COLUMNS))
+        if not tab.table.isColumnHidden(i)
+    ]
+
+
+def test_a_neuropil_layer_is_not_described_as_glomeruli(fafb_tabs):
+    """It has no compartments, so seven columns were blank and the header
+    claimed the table was about glomeruli while listing whole neuropils."""
+    tab = fafb_tabs["fafb_neuropil"]
+    assert tab.is_atlas is False
+    assert _visible_headers(tab) == ["", "neuropil", "label", "fill"]
+
+
+def test_an_atlas_layer_keeps_every_column(fafb_tabs):
+    tab = fafb_tabs["benton2025"]
+    assert tab.is_atlas is True
+    headers = _visible_headers(tab)
+    assert headers[1] == "glomerulus"
+    for expected in ("canonical", "side", "receptor(s)", "co-receptor(s)"):
+        assert expected in headers
+
+
+def test_fill_and_label_still_work_on_a_neuropil_tab(fafb_tabs):
+    """The two columns that are kept must still drive the layer."""
+    from qtpy.QtCore import Qt
+
+    from lobemap.viewer.panel import FILL_COL, LABEL_COL
+
+    tab = fafb_tabs["fafb_neuropil"]
+    if tab.contour is None:
+        pytest.skip("no contour overlay for the neuropil layer")
+    index = tab._index_of(2)
+    tab.table.item(2, FILL_COL).setCheckState(Qt.Checked)
+    assert index in tab.contour.filled
+    tab.table.item(2, LABEL_COL).setCheckState(Qt.Checked)
+    assert index in tab.contour.labels
+
+
+def test_columns_are_sized_to_their_contents(fafb_tabs):
+    """Not a fixed width: the receptor lists vary by a factor of three."""
+    from qtpy.QtWidgets import QHeaderView
+
+    from lobemap.viewer.panel import COLUMNS
+
+    tab = fafb_tabs["benton2025"]
+    header = tab.table.horizontalHeader()
+    for col in range(len(COLUMNS)):
+        assert header.sectionResizeMode(col) == QHeaderView.ResizeToContents
+    widths = {
+        tab.table.horizontalHeaderItem(c).text(): tab.table.columnWidth(c)
+        for c in range(len(COLUMNS))
+    }
+    # A column holding long strings must be wider than one holding "L"/"R".
+    assert widths["receptor(s)"] > widths["side"], widths
+    assert len(set(widths.values())) > 3, "columns look uniformly sized"

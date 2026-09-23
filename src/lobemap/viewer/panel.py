@@ -49,6 +49,12 @@ LABEL_COL = 4
 FILL_COL = 5
 REF_COL0 = 6
 
+#: Columns that only mean anything for an ATLAS. A neuropil layer has no
+#: compartments behind it, so its canonical name, side and annotation are
+#: all blank -- seven empty columns claiming the table is about glomeruli
+#: when it is listing whole neuropils.
+ATLAS_ONLY = (CANONICAL_COL, 3, *range(REF_COL0, 6 + len(REF_COLUMNS)))
+
 #: Rows carry their compartment index here. Once the table can be sorted,
 #: the visual row is no longer the compartment id and nothing may assume it.
 INDEX_ROLE = Qt.UserRole
@@ -73,10 +79,13 @@ class _Cell(QTableWidgetItem):
 
 class AtlasTab(QWidget):
     def __init__(self, surface, compartments=None, contour=None,
-                 annotation=None) -> None:
+                 annotation=None, is_atlas: bool = True) -> None:
         super().__init__()
         self.surface = surface
         self.contour = contour
+        #: False for a neuropil layer: the same widget, minus the columns
+        #: that describe a glomerulus.
+        self.is_atlas = is_atlas
         self.compartments = list(compartments or [])
         #: Glomerulus name -> annotation, from `core.reference`. Empty when
         #: the reference table is absent, which only empties those columns.
@@ -106,19 +115,24 @@ class AtlasTab(QWidget):
         layout.addLayout(buttons)
 
         self.table = QTableWidget(surface.meshset.n_compartments, len(COLUMNS))
-        self.table.setHorizontalHeaderLabels(COLUMNS)
+        labels = list(COLUMNS)
+        if not is_atlas:
+            labels[NAME_COL] = "neuropil"
+        self.table.setHorizontalHeaderLabels(labels)
         self.table.verticalHeader().setVisible(False)
         self.table.setSelectionBehavior(QAbstractItemView.SelectRows)
         self.table.setEditTriggers(QAbstractItemView.NoEditTriggers)
         header = self.table.horizontalHeader()
-        for col in (VISIBLE_COL, LABEL_COL, FILL_COL):
+        # Every column just wide enough for its widest cell. The annotation
+        # columns used to be a fixed 150px, which truncated the long
+        # receptor lists and padded the short ones.
+        for col in range(len(COLUMNS)):
             header.setSectionResizeMode(col, QHeaderView.ResizeToContents)
-        for col in (NAME_COL, CANONICAL_COL, 3):
-            header.setSectionResizeMode(col, QHeaderView.ResizeToContents)
-        for col in range(REF_COL0, len(COLUMNS)):
-            header.setSectionResizeMode(col, QHeaderView.Interactive)
-            self.table.setColumnWidth(col, 150)
         header.setSectionsClickable(True)
+        header.setStretchLastSection(False)
+        if not is_atlas:
+            for col in ATLAS_ONLY:
+                self.table.setColumnHidden(col, True)
 
         by_index = {c.local_id: c for c in self.compartments}
         # Sorting must be off while the rows are built, or Qt reorders them
@@ -160,7 +174,7 @@ class AtlasTab(QWidget):
             # Annotation, joined on the canonical name rather than the
             # published one: that is the name the reference table uses, and
             # it is what makes the same row match across atlases.
-            props = self._reference_for(comp, name)
+            props = self._reference_for(comp, name) if is_atlas else {}
             for i, key in enumerate(REF_COLUMNS):
                 self.table.setItem(row, REF_COL0 + i, _Cell(props.get(key, "")))
 
@@ -343,6 +357,7 @@ class CompartmentPanel(QTabWidget):
                 compartments=atlas.compartments if atlas else None,
                 contour=contours.get(name),
                 annotation=annotation,
+                is_atlas=atlas is not None,
             )
             self.tabs[name] = tab
             self.addTab(tab, name[:20])

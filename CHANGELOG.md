@@ -25,6 +25,8 @@
 
 ### Added
 
+- A neuropil layer's tab drops the columns that only describe a glomerulus and names its column `neuropil`. It has no compartments behind it, so canonical, side and the five annotation columns were blank while the header claimed the table was about glomeruli. `label` and `fill` stay and still work.
+- Table columns size to their widest cell rather than a fixed width, which was truncating the long receptor lists and padding the short ones.
 - The glomerulus table sorts. Clicking a header sorts by that column, and it opens sorted by glomerulus name — naturally, so `DA10` follows `DA9` rather than `DA1`.
 - A `fill` checkbox per glomerulus, beside `label`, drawing its 2D contour filled rather than as an outline. A napari `path` cannot be filled, so a filled glomerulus is added as a `polygon`; mesh–plane intersections are closed loops, so that is geometrically honest.
 - Five annotation columns — `receptor(s)`, `sensillum`, `ALRN`, `organ`, `co-receptor(s)` — from `registry/reference/glomerulus_ground_truth.csv`, joined on the canonical name. Every compartment of every atlas finds a row; receptors are populated for 98% of them.
