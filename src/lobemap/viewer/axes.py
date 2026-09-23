@@ -7,11 +7,24 @@ anterior" is not something a reader can carry between scenes, and without
 this the only thing that knew it was the camera.
 
 napari already draws an axis indicator, so the job here is only to name it:
-`dims.axis_labels` becomes the anatomy, as a direction of travel ("P->A"),
-and the overlay is switched on. That matches how the indicator actually
-draws -- one arrow per array axis, pointing along INCREASING index -- so the
-arrow and its label agree: "A->P" means that going that way takes you from
-anterior to posterior.
+`dims.axis_labels` becomes the anatomy and the overlay is switched on.
+
+Each label is the single pole its own arrow POINTS AT. The indicator draws
+one arrow per array axis, always along INCREASING index, and which pole
+that reaches differs per space -- FAFB's third axis runs posterior while
+the hemibrain's second runs anterior -- so the labels differ too: FAFB
+reads R, V, P and the hemibrain L, A, V.
+
+They used to read as a direction of travel, "A->P". That was accurate and
+still misread: it looks like the NAME of an axis, and naming the axis
+leaves which end is which to be worked out from the arrow. A label that
+names one pole cannot be read as an axis name, and cannot contradict the
+arrow it sits on, because it is derived from where that arrow goes.
+
+Labelling every arrow `A`, `D`, `L` regardless was considered and is not
+possible here: `CanvasAxesOverlay` has no way to reverse an arrow, so on
+FAFB's third axis the label would point opposite to the arrow under it --
+the same disagreement that got the old Vectors layer removed, below.
 
 napari 0.9 offers two: a SCENE overlay drawn at the world origin, and a
 CANVAS overlay anchored in a corner. This uses the canvas one, because the
@@ -52,9 +65,9 @@ def axis_labels_for(space) -> tuple[str, ...] | None:
     declare anterior and dorsal as signed array axes, so the frame is
     axis-aligned by construction -- which is what makes this possible at all.
 
-    A label is just the direction of travel, "P->A". The axis name is not
-    repeated: "A-P (P->A)" said the same thing twice, since the pair of poles
-    already names the axis.
+    Each label is the pole that axis's arrow points at, so it describes
+    the arrow rather than the axis: an arrow running toward posterior is
+    labelled `P`, not `A-P` or `A->P`.
     """
     frame = anatomical_axes(space)
     if frame is None:
@@ -63,13 +76,9 @@ def axis_labels_for(space) -> tuple[str, ...] | None:
     for positive, negative, _label in AXIS_POLES:
         vector = frame[positive]
         axis = int(np.argmax(np.abs(vector)))
-        forward = vector[axis] > 0
-        # Read along increasing index, which is the way the overlay's arrow
-        # points, so the label describes that arrow rather than contradicting
-        # it.
-        names[axis] = (
-            f"{negative}->{positive}" if forward else f"{positive}->{negative}"
-        )
+        # The arrow runs along INCREASING index, so it reaches `positive`
+        # when this axis points that way and `negative` when it does not.
+        names[axis] = positive if vector[axis] > 0 else negative
     return tuple(names)
 
 

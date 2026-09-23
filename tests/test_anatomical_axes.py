@@ -164,38 +164,57 @@ def test_a_space_without_axes_gets_no_frame():
 
 
 def test_axis_labels_name_every_array_axis(registry):
-    """Each array axis carries exactly one anatomical axis, with its sign.
+    """One pole per array axis, and all three axes covered once each.
 
-    A label is the direction of travel alone -- "P->A" -- so the pair of
-    poles is what identifies the axis.
+    A label is a single pole -- `P`, not `A-P` or `A->P` -- so what
+    identifies the axis is which pair the pole belongs to.
     """
+    pair_of = {"A": "AP", "P": "AP", "D": "DV", "V": "DV",
+               "L": "LR", "R": "LR"}
     for space_id in ("FAFB14", "JRCFIB2018F", "JRCFIB2022M", "GRABE"):
         labels = axis_labels_for(registry.spaces[space_id])
         assert labels is not None and len(labels) == 3
         assert "?" not in "".join(labels), f"{space_id}: unnamed axis in {labels}"
         for label in labels:
-            assert "(" not in label, (
-                f"{space_id}: {label!r} still repeats the axis name"
+            assert label in pair_of, (
+                f"{space_id}: {label!r} is not a single anatomical pole"
             )
-        # A set, not a sorted list: `<` on frozensets is subset, not an
-        # ordering, so sorting them compares nothing useful.
-        pairs = {frozenset(label.split("->")) for label in labels}
-        assert pairs == {
-            frozenset("AP"), frozenset("DV"), frozenset("LR")
-        }, f"{space_id}: {labels} does not cover all three axes once each"
+        assert {pair_of[x] for x in labels} == {"AP", "DV", "LR"}, (
+            f"{space_id}: {labels} does not cover all three axes once each"
+        )
 
 
-def test_axis_labels_read_along_increasing_index(registry):
-    """"P->A" must mean that walking the slider up goes P then A."""
+def test_each_label_names_the_pole_its_own_arrow_reaches(registry):
+    """The label must describe the arrow it sits on.
+
+    napari draws each arrow along INCREASING index and offers no way to
+    reverse one, so a label naming the opposite pole would contradict the
+    arrow beneath it -- which is what got the old Vectors layer removed.
+    """
     for space_id in ("FAFB14", "JRCFIB2018F", "JRCFIB2022M", "GRABE"):
         space = registry.spaces[space_id]
         frame = anatomical_axes(space)
-        for axis, label in enumerate(axis_labels_for(space)):
-            _from, to = label.split("->")
-            assert frame[to][axis] > 0, (
-                f"{space_id} axis {axis} is labelled {label!r}, but {to} "
-                f"points down the axis, not up it"
+        for axis, pole in enumerate(axis_labels_for(space)):
+            assert frame[pole][axis] > 0, (
+                f"{space_id} axis {axis} is labelled {pole!r}, but {pole} "
+                f"lies down that axis, not up it -- the arrow points the "
+                f"other way"
             )
+
+
+def test_the_labels_differ_between_spaces(registry):
+    """Not a cosmetic detail: the arrows genuinely reach different poles.
+
+    FAFB's third axis runs posterior where the hemibrain's second runs
+    anterior, so a fixed `A, D, L` would be wrong in some space.
+    """
+    labels = {
+        s: axis_labels_for(registry.spaces[s])
+        for s in ("FAFB14", "JRCFIB2018F", "JRCFIB2022M", "GRABE")
+    }
+    assert labels["FAFB14"] == ("R", "V", "P"), labels["FAFB14"]
+    assert labels["JRCFIB2018F"] == ("L", "A", "V"), labels["JRCFIB2018F"]
+    assert len(set(labels.values())) > 1
 
 
 def test_no_axes_layer_is_created(registry):

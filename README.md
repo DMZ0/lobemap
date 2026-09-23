@@ -151,10 +151,10 @@ stamps the date it ran — but its *content* hash is, and the build prints it.
   channel — is shown whenever it has been fetched. `--show` turns on a
   layer that is off, by asset id or by role, for example `--show
   neuropil`.
-- The axis indicator in the bottom-left corner is labelled anatomically,
-  as a direction of travel: `P->A` on the axis that runs posterior to
-  anterior. Which array axis that is differs between spaces, so the labels
-  change when you switch.
+- The axis indicator in the bottom-left corner is labelled anatomically.
+  Each arrow carries the single pole it points at, so FAFB reads `R, V, P`
+  and the hemibrain `L, A, V` — the arrows run along increasing array
+  index, and which pole that reaches differs between spaces.
 
 Both the mesh and contour layers stay in the layer list in either mode; the
 one the current mode cannot draw is simply switched off.
