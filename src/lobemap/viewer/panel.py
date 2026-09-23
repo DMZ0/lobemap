@@ -108,6 +108,8 @@ class AtlasTab(QWidget):
             ("Invert", self._invert),
             ("Label all", self._labels_for_shown),
             ("Label none", self._no_labels),
+            ("Fill all", self._fill_for_shown),
+            ("Fill none", self._no_fill),
         ):
             button = QPushButton(label)
             button.clicked.connect(slot)
@@ -259,12 +261,13 @@ class AtlasTab(QWidget):
             self.contour.set_selection(self.surface.selection)
         self._update_count()
 
-    def _set_labels(self, indices) -> None:
+    def _set_checks(self, column: int, indices) -> set[int]:
+        """Tick exactly these compartments in `column`, whatever the order."""
         wanted = set(indices)
         self._updating = True
         try:
             for row in range(self.table.rowCount()):
-                item = self.table.item(row, LABEL_COL)
+                item = self.table.item(row, column)
                 index = self._index_of(row)
                 if item is not None and index is not None:
                     item.setCheckState(
@@ -272,8 +275,17 @@ class AtlasTab(QWidget):
                     )
         finally:
             self._updating = False
+        return wanted
+
+    def _set_labels(self, indices) -> None:
+        wanted = self._set_checks(LABEL_COL, indices)
         if self.contour is not None:
             self.contour.set_labels(wanted)
+
+    def _set_fills(self, indices) -> None:
+        wanted = self._set_checks(FILL_COL, indices)
+        if self.contour is not None:
+            self.contour.set_fills(wanted)
 
     def _labels_for_shown(self) -> None:
         """Label whatever is currently visible -- the useful bulk action."""
@@ -281,6 +293,13 @@ class AtlasTab(QWidget):
 
     def _no_labels(self) -> None:
         self._set_labels(set())
+
+    def _fill_for_shown(self) -> None:
+        """Fill whatever is currently visible, matching `Label all`."""
+        self._set_fills(set(self.surface.selection))
+
+    def _no_fill(self) -> None:
+        self._set_fills(set())
 
     def _set_indices(self, indices) -> None:
         """Show exactly these COMPARTMENTS, whatever order the rows are in."""

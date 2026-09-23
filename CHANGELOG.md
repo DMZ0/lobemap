@@ -25,6 +25,7 @@
 
 ### Added
 
+- `Fill all` and `Fill none` buttons, beside `Label all` / `Label none`. `Fill all` fills whatever is currently visible, matching how `Label all` behaves.
 - A neuropil layer's tab drops the columns that only describe a glomerulus and names its column `neuropil`. It has no compartments behind it, so canonical, side and the five annotation columns were blank while the header claimed the table was about glomeruli. `label` and `fill` stay and still work.
 - Table columns size to their widest cell rather than a fixed width, which was truncating the long receptor lists and padding the short ones.
 - The glomerulus table sorts. Clicking a header sorts by that column, and it opens sorted by glomerulus name — naturally, so `DA10` follows `DA9` rather than `DA1`.
@@ -53,6 +54,7 @@
 
 ### Fixes
 
+- Filling a neuropil contour no longer raises `could not convert string to float`. A layer's colour is not always a sequence of numbers — the neuropil shells are the hex string `#9aa0a6`, and indexing that yields `#`. Colour specs now go through napari's own parser, so names, hex and arrays all work.
 - `lobemap view` no longer prints a `crash log: ...` line on every launch, and no longer leaves an empty log behind. faulthandler is still armed — a native vispy/Qt/driver fault would otherwise kill python with no trace — but it now reports only when something was written, deletes its file on a clean exit, and sweeps empties left by runs that were killed rather than exited. Measured before the change: 54 empty files out of 55 launches, against one real report. A log still held open by a live viewer cannot be unlinked, so those are skipped.
 - The anatomical axis indicator is drawn as a canvas overlay rather than a scene one, so it is visible in the default view of every space. A scene overlay sits at the world origin, which is not inside the data: FAFB spans x 192-853 um, so its indicator was ~190 um off-screen, and the male CNS showed part of one.
 - Removed three `*_stain.progress.log` files committed by accident.

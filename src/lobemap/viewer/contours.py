@@ -167,17 +167,30 @@ class ContourOverlay:
 
     FILL_ALPHA = 0.35
 
+    @staticmethod
+    def _as_rgba(spec) -> tuple[float, float, float, float]:
+        """Any colour napari accepts -> four floats.
+
+        A layer's colour is not always a sequence of numbers: the neuropil
+        shells are the hex string "#9aa0a6", and indexing that gives "#",
+        so filling one raised `could not convert string to float`. Names
+        and hex both have to go through napari's own parser.
+        """
+        from napari.utils.colormaps.standardize_color import transform_color
+
+        return tuple(float(v) for v in np.asarray(transform_color(spec))[0])
+
     def _face_colors(self, owners):
         """Per-shape face colour: the mesh colour, faded, or transparent."""
         out = []
         for i in owners:
-            if i in self.filled:
-                rgba = (self.colors[i] if self.colors is not None
-                        and 0 <= i < len(self.colors) else self.color)
-                out.append((float(rgba[0]), float(rgba[1]), float(rgba[2]),
-                            self.FILL_ALPHA))
-            else:
+            if i not in self.filled:
                 out.append((0.0, 0.0, 0.0, 0.0))
+                continue
+            spec = (self.colors[i] if self.colors is not None
+                    and 0 <= i < len(self.colors) else self.color)
+            r, g, b, _ = self._as_rgba(spec)
+            out.append((r, g, b, self.FILL_ALPHA))
         return out
 
     def _shape_types(self, owners):

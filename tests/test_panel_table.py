@@ -251,3 +251,53 @@ def test_columns_are_sized_to_their_contents(fafb_tabs):
     # A column holding long strings must be wider than one holding "L"/"R".
     assert widths["receptor(s)"] > widths["side"], widths
     assert len(set(widths.values())) > 3, "columns look uniformly sized"
+
+
+def test_a_hex_colour_spec_does_not_break_filling():
+    """The bug: neuropil shells are the string "#9aa0a6", and indexing a
+    string gives "#", so filling one raised `could not convert string to
+    float`. Only the atlases carry per-compartment arrays."""
+    from lobemap.viewer.contours import ContourOverlay
+
+    for spec in ("#9aa0a6", "#ff7f0e", "white", (0.1, 0.2, 0.3, 1.0)):
+        r, g, b, a = ContourOverlay._as_rgba(spec)
+        assert all(0.0 <= v <= 1.0 for v in (r, g, b, a)), spec
+
+
+def test_fill_all_works_on_a_neuropil_layer(fafb_tabs):
+    """End to end, in 2D, where the contours actually draw."""
+    import numpy as np
+
+    tab = fafb_tabs["fafb_neuropil"]
+    if tab.contour is None:
+        pytest.skip("no contour overlay")
+    tab.contour.layer.visible = True
+    tab.contour.refresh()
+
+    tab._fill_for_shown()
+    assert tab.contour.filled == set(tab.surface.selection)
+    if len(tab.contour.layer.data):
+        kinds = {getattr(s, "name", str(s)).lower()
+                 for s in tab.contour.layer.shape_type}
+        assert kinds == {"polygon"}, kinds
+        faces = np.asarray(tab.contour.layer.face_color)
+        assert np.allclose(faces[:, 3], tab.contour.FILL_ALPHA)
+
+    tab._no_fill()
+    assert tab.contour.filled == set()
+
+
+def test_fill_buttons_track_the_checkboxes(fafb_tabs):
+    from qtpy.QtCore import Qt
+
+    from lobemap.viewer.panel import FILL_COL
+
+    tab = fafb_tabs["benton2025"]
+    tab._fill_for_shown()
+    states = {tab.table.item(r, FILL_COL).checkState()
+              for r in range(tab.table.rowCount())}
+    assert states == {Qt.Checked}, "Fill all left boxes unticked"
+    tab._no_fill()
+    states = {tab.table.item(r, FILL_COL).checkState()
+              for r in range(tab.table.rowCount())}
+    assert states == {Qt.Unchecked}, "Fill none left boxes ticked"
