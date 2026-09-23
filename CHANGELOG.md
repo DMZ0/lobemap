@@ -26,12 +26,12 @@
 ### Added
 
 - `lobemap pack` writes the upload-ready copies of the data artifacts. `manifest` and `fetch --check` zipped a Zarr store to hash it and then deleted the archive, so the bytes a downloader receives could not be obtained; `pack` keeps them, under the names `fetch` requests, and re-hashes each against the manifest.
-- `lobemap fetch --all`, to include the virtual stains.
+- `lobemap fetch --nostains`, to skip the virtual stains.
 
 ### Changed
 
 - The data is published as release assets and no longer ships in the repository. All fourteen artifacts (2.51 GB) are on the [`data-v1` release](https://github.com/DMZ0/lobemap/releases/tag/data-v1), and `base_url` in the committed manifest points at them. The eleven small assets used to be tracked; splitting the rule by size left two answers to where the data lives, for the 76 MB it saved.
-- `lobemap fetch` holds back the three virtual stains unless asked for with `--all` or by name. They are 2.44 GB of the 2.51 GB total and are reference imagery that starts hidden, so every scene opens without them.
+- `lobemap fetch` gets every artifact, including the three virtual stains. `--nostains` skips them, which is 76 MB instead of 2.5 GB; every space still opens, the three EM spaces just without their reference image. Holding them back by default made the obvious command the one that left three of the four spaces looking incomplete for no stated reason.
 - `lobemap view` fetches missing required artifacts before opening a scene. Nothing runs on `uv sync`, so this is the first opportunity a fresh clone has to get its data.
 - The "no data for this space" report leads with `lobemap fetch` rather than `lobemap build`.
 - Reference images are visible whenever they are on disk. They were created hidden and turned back on by each default scene preset, so the default only governed a scene that did not name its own image — `hemibrain_three_ways` opened with the stain off, which nobody had chosen. A preset can still turn one off. The Grabe label volume stays off: it is a segmentation of the glomeruli the meshes already draw.

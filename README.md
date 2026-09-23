@@ -33,9 +33,18 @@ Then fetch the data, which is published separately rather than committed:
 uv run lobemap fetch
 ```
 
-That is 76 MB: every atlas, every neuropil set and the Grabe confocal
-stack, which is enough to open all four spaces. It leaves out the virtual
-stains, described under [Data](#data) below, because they are 2.4 GB.
+That is 2.5 GB and gets everything: the atlases, the neuropil sets, the
+Grabe confocal stack, and the three virtual stains described under
+[Data](#data) below. The stains are 2.4 GB of that, so if you would
+rather not wait for them:
+
+```bash
+uv run lobemap fetch --nostains
+```
+
+leaves them out and takes 76 MB. Every space still opens; the three EM
+spaces just open without their reference image, and running the full
+`fetch` later fills them in.
 
 ## Quick start
 
@@ -88,22 +97,21 @@ and their colours.
 None of the data is committed. All fourteen artifacts are published as
 assets on the [`data-v1`
 release](https://github.com/DMZ0/lobemap/releases/tag/data-v1) — 2.51 GB,
-of which the three virtual stains are 2.44 GB, which is why a plain `fetch`
-leaves them out. `registry/manifest.toml` records the sha256 of every one,
-and `lobemap fetch` checks each download against it; a file that does not
-match is discarded rather than kept.
+of which the three virtual stains are 2.44 GB.
+`registry/manifest.toml` records the sha256 of every one, and `lobemap
+fetch` checks each download against it; a file that does not match is
+discarded rather than kept. Naming an asset fetches just that one:
 
 ```bash
-uv run lobemap fetch --all
+uv run lobemap fetch --asset hemibrain_stain
 ```
 
-gets the stains as well, or name one to fetch it on its own.
-
-`lobemap view` fetches anything a scene needs and cannot find, so in
-practice the explicit `fetch` above is a way to get it over with rather
-than a requirement. The stains are never fetched implicitly, because
-every scene opens without one — but a stain that *is* on disk is shown,
-so fetching one changes what you see the next time that scene opens.
+`lobemap view` fetches anything a scene needs and cannot find, so the
+explicit `fetch` above is a way to get it over with rather than a
+requirement. That implicit fetch never pulls a stain, though — 2.4 GB
+nobody asked for is a different thing from 2.4 GB somebody typed — so
+after `fetch --nostains` the EM spaces keep opening without a backdrop
+until you ask for one. A stain that *is* on disk is always shown.
 
 You can also rebuild from source instead of downloading:
 

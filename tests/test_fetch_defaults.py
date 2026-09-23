@@ -1,11 +1,11 @@
 """What `fetch` downloads when you do not tell it.
 
-The data is published as one release, but it is not one size: the three
-virtual stains are 2.44 GB of the 2.51 GB total, and they are reference
-imagery that starts hidden, so every scene opens without them. A plain
-`fetch` therefore gets the 76 MB that a scene cannot open without, and the
-stains have to be asked for -- the same rule `build --all` uses at the
-other end of the pipeline, for the same reason.
+Everything. The data is published as one release and is not one size --
+the three virtual stains are 2.44 GB of the 2.51 GB total -- so `fetch`
+held them back and `--all` added them. That made the obvious command the
+one that left three of the four spaces without their reference image, and
+nothing on screen said why. Asking for less is the rarer case, so it is
+the one that carries a flag: `--nostains`.
 
 Driven over `file://` URLs, so the real download path runs.
 """
@@ -60,19 +60,19 @@ def _fetch(registry, data, *extra):
                  "fetch", *extra])
 
 
-def test_a_plain_fetch_leaves_the_expensive_one_alone(published, capsys):
+def test_a_plain_fetch_gets_everything(published):
     registry, data = published
     assert _fetch(registry, data) == 0
     assert (data / "mesh.npz").exists()
-    assert not (data / "stain.npz").exists()
-    assert "holding back" in capsys.readouterr().out
-
-
-def test_all_includes_it(published):
-    registry, data = published
-    assert _fetch(registry, data, "--all") == 0
-    assert (data / "mesh.npz").exists()
     assert (data / "stain.npz").exists()
+
+
+def test_nostains_leaves_the_expensive_one_alone(published, capsys):
+    registry, data = published
+    assert _fetch(registry, data, "--nostains") == 0
+    assert (data / "mesh.npz").exists()
+    assert not (data / "stain.npz").exists()
+    assert "skipping" in capsys.readouterr().out
 
 
 def test_naming_it_is_enough(published):
@@ -83,16 +83,23 @@ def test_naming_it_is_enough(published):
     assert not (data / "mesh.npz").exists()
 
 
-def test_check_does_not_re_zip_the_expensive_one(published, capsys):
-    """`--check` verifies a store by zipping it, which for the real stains
-    is 2.4 GB of work. The default selection keeps that off the fast path."""
+def test_nostains_also_narrows_what_check_verifies(published, capsys):
+    """Verifying a store means re-zipping it, which for the real stains is
+    2.4 GB of work. `--check --nostains` is the way to skip that."""
     registry, data = published
-    _fetch(registry, data, "--all")
-    assert _fetch(registry, data, "--check") == 0
+    _fetch(registry, data)
+    assert _fetch(registry, data, "--check", "--nostains") == 0
     assert "1 selected" in capsys.readouterr().out
 
 
-def test_autofetch_gets_the_required_ones(published):
+def test_autofetch_still_leaves_the_stains_alone(published):
+    """Deliberately not the same rule as `fetch`.
+
+    `fetch` is a command someone typed, so it does the whole job. This
+    runs on the way into the viewer without being asked, and starting a
+    2.4 GB download that nobody requested is a different thing from
+    obeying one.
+    """
     registry, data = published
     _autofetch(registry, data)
     assert (data / "mesh.npz").exists()

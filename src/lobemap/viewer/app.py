@@ -81,9 +81,9 @@ class MissingAssets(RuntimeError):
         if large:
             lines += [
                 "",
-                (f"{len(large)} of those is a virtual stain, which `fetch` "
-                 f"holds back: they are"),
-                "2.4 GB together. Ask for them with `lobemap fetch --all`.",
+                (f"{len(large)} of those is a virtual stain. `fetch` gets "
+                 f"them, but they are 2.4 GB"),
+                "together; `lobemap fetch --nostains` skips them.",
             ]
         lines += ["", "Or rebuild from source:", "", "  lobemap build --all"]
         return chr(10).join(lines)

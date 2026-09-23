@@ -167,21 +167,23 @@ def cmd_fetch(args) -> int:
     arts, base_url = mf.load(path)
     base_url = args.base_url or base_url
 
-    # Named assets win; otherwise the expensive ones are held back unless
-    # --all. Verifying a stain means re-zipping it, so this keeps the
-    # default `fetch` and `fetch --check` fast as well as small.
+    # Everything, unless told otherwise. `fetch` used to hold the stains
+    # back and need `--all` to include them, which made the obvious command
+    # the one that left the reference image out of three of the four
+    # spaces: a scene opened without its backdrop and nothing said why.
+    # Asking for less is the rarer case, so it is the one that needs a flag.
     optional = _optional_assets(root)
     if args.asset:
         wanted = [a for a in arts if a.asset in set(args.asset)]
-    elif args.all:
-        wanted = list(arts)
-    else:
+    elif args.nostains:
         wanted = [a for a in arts if a.asset not in optional]
         held = [a.asset for a in arts if a.asset in optional]
         if held:
-            print(f"holding back {len(held)} large artifact(s): "
+            print(f"skipping {len(held)} virtual stain(s): "
                   f"{', '.join(held)}")
-            print("  fetch them with --all, or by name.")
+            print("  fetch them later with `lobemap fetch`, or by name.")
+    else:
+        wanted = list(arts)
     print(f"manifest: {len(arts)} artifacts, {len(wanted)} selected")
     print(f"data root: {data_root}")
 
@@ -1106,9 +1108,9 @@ def main(argv: list[str] | None = None) -> int:
     ft.add_argument("--manifest", default=None)
     ft.add_argument("--base-url", default=None, help="overrides the manifest's")
     ft.add_argument("--asset", action="append", help="only this asset; repeatable")
-    ft.add_argument("--all", action="store_true",
-                    help="include the virtual stains, which are held back by "
-                         "default because they are 2.4 GB of the 2.5 GB total")
+    ft.add_argument("--nostains", action="store_true",
+                    help="skip the three virtual stains, which are 2.4 GB of "
+                         "the 2.5 GB total; everything else is 76 MB")
     ft.add_argument("--check", action="store_true",
                     help="verify what is present and exit; download nothing")
     ft.set_defaults(func=cmd_fetch)
