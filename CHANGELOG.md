@@ -25,6 +25,10 @@
 
 ### Added
 
+- The glomerulus table sorts. Clicking a header sorts by that column, and it opens sorted by glomerulus name — naturally, so `DA10` follows `DA9` rather than `DA1`.
+- A `fill` checkbox per glomerulus, beside `label`, drawing its 2D contour filled rather than as an outline. A napari `path` cannot be filled, so a filled glomerulus is added as a `polygon`; mesh–plane intersections are closed loops, so that is geometrically honest.
+- Five annotation columns — `receptor(s)`, `sensillum`, `ALRN`, `organ`, `co-receptor(s)` — from `registry/reference/glomerulus_ground_truth.csv`, joined on the canonical name. Every compartment of every atlas finds a row; receptors are populated for 98% of them.
+- `registry/reference/glomerulus_ground_truth.csv`, retained from the upstream `datasets/reference-tables/`.
 - `lobemap pack` writes the upload-ready copies of the data artifacts. `manifest` and `fetch --check` zipped a Zarr store to hash it and then deleted the archive, so the bytes a downloader receives could not be obtained; `pack` keeps them, under the names `fetch` requests, and re-hashes each against the manifest.
 - `lobemap fetch --nostains`, to skip the virtual stains.
 

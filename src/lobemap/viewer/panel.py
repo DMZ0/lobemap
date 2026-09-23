@@ -14,6 +14,8 @@ replacing it: picking in the canvas selects the row here, and vice versa.
 
 from __future__ import annotations
 
+import re
+
 from qtpy.QtCore import Qt
 from qtpy.QtGui import QColor
 from qtpy.QtWidgets import (
@@ -30,20 +32,55 @@ from qtpy.QtWidgets import (
     QWidget,
 )
 
-#: Column 0 toggles the mesh, the last toggles the slice label. Labels are
-#: per glomerulus because several atlases in one scene would otherwise write
-#: each name once per atlas.
-COLUMNS = ("", "glomerulus", "canonical", "side", "label")
+from ..core import reference
+
+#: Column 0 toggles the mesh; `label` writes the name on the slice and
+#: `fill` draws the 2D contour filled. Both are per glomerulus because
+#: several atlases in one scene would otherwise act once per atlas.
+#:
+#: The annotation columns come from `registry/reference/`, joined on the
+#: canonical name; see `core.reference`.
+REF_COLUMNS = tuple(reference.FIELDS)
+COLUMNS = ("", "glomerulus", "canonical", "side", "label", "fill", *REF_COLUMNS)
 VISIBLE_COL = 0
-LABEL_COL = len(COLUMNS) - 1
+NAME_COL = 1
+CANONICAL_COL = 2
+LABEL_COL = 4
+FILL_COL = 5
+REF_COL0 = 6
+
+#: Rows carry their compartment index here. Once the table can be sorted,
+#: the visual row is no longer the compartment id and nothing may assume it.
+INDEX_ROLE = Qt.UserRole
+
+
+def _natural_key(text: str):
+    """DA10 after DA9, not between DA1 and DA2."""
+    return [
+        int(part) if part.isdigit() else part.lower()
+        for part in re.split(r"(\d+)", text)
+    ]
+
+
+class _Cell(QTableWidgetItem):
+    """A cell that sorts naturally rather than by raw code point."""
+
+    def __lt__(self, other):
+        if isinstance(other, QTableWidgetItem):
+            return _natural_key(self.text()) < _natural_key(other.text())
+        return super().__lt__(other)
 
 
 class AtlasTab(QWidget):
-    def __init__(self, surface, compartments=None, contour=None) -> None:
+    def __init__(self, surface, compartments=None, contour=None,
+                 annotation=None) -> None:
         super().__init__()
         self.surface = surface
         self.contour = contour
         self.compartments = list(compartments or [])
+        #: Glomerulus name -> annotation, from `core.reference`. Empty when
+        #: the reference table is absent, which only empties those columns.
+        self.reference = annotation or {}
         self._updating = False
 
         layout = QVBoxLayout()
@@ -74,12 +111,19 @@ class AtlasTab(QWidget):
         self.table.setSelectionBehavior(QAbstractItemView.SelectRows)
         self.table.setEditTriggers(QAbstractItemView.NoEditTriggers)
         header = self.table.horizontalHeader()
-        header.setSectionResizeMode(VISIBLE_COL, QHeaderView.ResizeToContents)
-        header.setSectionResizeMode(LABEL_COL, QHeaderView.ResizeToContents)
-        for col in range(1, LABEL_COL):
-            header.setSectionResizeMode(col, QHeaderView.Stretch)
+        for col in (VISIBLE_COL, LABEL_COL, FILL_COL):
+            header.setSectionResizeMode(col, QHeaderView.ResizeToContents)
+        for col in (NAME_COL, CANONICAL_COL, 3):
+            header.setSectionResizeMode(col, QHeaderView.ResizeToContents)
+        for col in range(REF_COL0, len(COLUMNS)):
+            header.setSectionResizeMode(col, QHeaderView.Interactive)
+            self.table.setColumnWidth(col, 150)
+        header.setSectionsClickable(True)
 
         by_index = {c.local_id: c for c in self.compartments}
+        # Sorting must be off while the rows are built, or Qt reorders them
+        # underneath the loop and the cells land on the wrong rows.
+        self.table.setSortingEnabled(False)
         for row, name in enumerate(surface.meshset.names):
             comp = by_index.get(row)
             check = QTableWidgetItem()
@@ -87,27 +131,44 @@ class AtlasTab(QWidget):
             check.setCheckState(
                 Qt.Checked if row in surface.selection else Qt.Unchecked
             )
-            check.setData(Qt.UserRole, row)
-            self.table.setItem(row, 0, check)
+            check.setData(INDEX_ROLE, row)
+            self.table.setItem(row, VISIBLE_COL, check)
 
-            label = QTableWidgetItem(name)
+            label = _Cell(name)
             rgba = surface.colors[row]
             label.setForeground(
                 QColor.fromRgbF(float(rgba[0]), float(rgba[1]), float(rgba[2]))
             )
-            self.table.setItem(row, 1, label)
-            self.table.setItem(
-                row, 2, QTableWidgetItem(", ".join(comp.canonical) if comp else "")
-            )
-            self.table.setItem(row, 3, QTableWidgetItem((comp.side or "") if comp else ""))
+            label.setData(INDEX_ROLE, row)
+            self.table.setItem(row, NAME_COL, label)
+            canonical = ", ".join(comp.canonical) if comp else ""
+            self.table.setItem(row, CANONICAL_COL, _Cell(canonical))
+            self.table.setItem(row, 3, _Cell((comp.side or "") if comp else ""))
 
-            label_check = QTableWidgetItem()
-            label_check.setFlags(label_check.flags() | Qt.ItemIsUserCheckable)
-            label_check.setCheckState(Qt.Unchecked)
-            label_check.setData(Qt.UserRole, row)
-            label_check.setToolTip("write this glomerulus's name on the slice (2D)")
-            self.table.setItem(row, LABEL_COL, label_check)
+            tips = {
+                LABEL_COL: "write this glomerulus's name on the slice (2D)",
+                FILL_COL: "draw this glomerulus's 2D contour filled",
+            }
+            for col, tip in tips.items():
+                box = QTableWidgetItem()
+                box.setFlags(box.flags() | Qt.ItemIsUserCheckable)
+                box.setCheckState(Qt.Unchecked)
+                box.setData(INDEX_ROLE, row)
+                box.setToolTip(tip)
+                self.table.setItem(row, col, box)
 
+            # Annotation, joined on the canonical name rather than the
+            # published one: that is the name the reference table uses, and
+            # it is what makes the same row match across atlases.
+            props = self._reference_for(comp, name)
+            for i, key in enumerate(REF_COLUMNS):
+                self.table.setItem(row, REF_COL0 + i, _Cell(props.get(key, "")))
+
+        # Alphabetical on the glomerulus by default, and clickable headers
+        # from here on: the table is long enough that scanning it unsorted
+        # is the wrong default.
+        self.table.setSortingEnabled(True)
+        self.table.sortItems(NAME_COL, Qt.AscendingOrder)
         self.table.itemChanged.connect(self._on_item_changed)
         layout.addWidget(self.table, stretch=1)
 
@@ -117,6 +178,32 @@ class AtlasTab(QWidget):
         self._update_count()
 
     # -- helpers ---------------------------------------------------------
+    #
+    # The visual row and the compartment index are different numbers once
+    # the table can be sorted. Every row carries its index in INDEX_ROLE;
+    # nothing below may use a row number as a compartment id.
+
+    def _reference_for(self, comp, published: str) -> dict:
+        names = list(comp.canonical) if comp and comp.canonical else []
+        names.append(published)
+        for n in names:
+            hit = self.reference.get(n) or self.reference.get(n.lower())
+            if hit:
+                return hit
+        return {}
+
+    def _index_of(self, row: int) -> int | None:
+        item = self.table.item(row, VISIBLE_COL)
+        if item is None:
+            return None
+        value = item.data(INDEX_ROLE)
+        return None if value is None else int(value)
+
+    def _row_of(self, index: int) -> int | None:
+        for row in range(self.table.rowCount()):
+            if self._index_of(row) == index:
+                return row
+        return None
 
     def _row_text(self, row: int) -> str:
         return " ".join(
@@ -140,16 +227,18 @@ class AtlasTab(QWidget):
     def _on_item_changed(self, item: QTableWidgetItem) -> None:
         if self._updating:
             return
-        if item.column() == LABEL_COL:
+        if item.column() in (LABEL_COL, FILL_COL):
             if self.contour is not None:
-                self.contour.set_label(
-                    int(item.data(Qt.UserRole)),
-                    item.checkState() == Qt.Checked,
-                )
+                index = int(item.data(INDEX_ROLE))
+                on = item.checkState() == Qt.Checked
+                if item.column() == LABEL_COL:
+                    self.contour.set_label(index, on)
+                else:
+                    self.contour.set_fill(index, on)
             return
         if item.column() != VISIBLE_COL:
             return
-        index = int(item.data(Qt.UserRole))
+        index = int(item.data(INDEX_ROLE))
         visible = item.checkState() == Qt.Checked
         self.surface.set_visible(index, visible)
         if self.contour is not None:
@@ -162,9 +251,10 @@ class AtlasTab(QWidget):
         try:
             for row in range(self.table.rowCount()):
                 item = self.table.item(row, LABEL_COL)
-                if item is not None:
+                index = self._index_of(row)
+                if item is not None and index is not None:
                     item.setCheckState(
-                        Qt.Checked if row in wanted else Qt.Unchecked
+                        Qt.Checked if index in wanted else Qt.Unchecked
                     )
         finally:
             self._updating = False
@@ -178,34 +268,44 @@ class AtlasTab(QWidget):
     def _no_labels(self) -> None:
         self._set_labels(set())
 
-    def _set_rows(self, rows) -> None:
+    def _set_indices(self, indices) -> None:
+        """Show exactly these COMPARTMENTS, whatever order the rows are in."""
+        wanted = set(indices)
         self._updating = True
         selection = set()
         for row in range(self.table.rowCount()):
-            on = row in rows
-            self.table.item(row, 0).setCheckState(
+            index = self._index_of(row)
+            if index is None:
+                continue
+            on = index in wanted
+            self.table.item(row, VISIBLE_COL).setCheckState(
                 Qt.Checked if on else Qt.Unchecked
             )
             if on:
-                selection.add(row)
+                selection.add(index)
         self._updating = False
         self._push(selection)
 
+    def _all_indices(self) -> set[int]:
+        return {i for i in (self._index_of(r)
+                            for r in range(self.table.rowCount()))
+                if i is not None}
+
     def _all(self) -> None:
-        self._set_rows(set(range(self.table.rowCount())))
+        self._set_indices(self._all_indices())
 
     def _none(self) -> None:
-        self._set_rows(set())
+        self._set_indices(set())
 
     def _filtered_only(self) -> None:
-        """Check exactly the rows currently passing the filter."""
-        self._set_rows(
-            {r for r in range(self.table.rowCount()) if not self.table.isRowHidden(r)}
-        )
+        """Check exactly the compartments whose rows pass the filter."""
+        self._set_indices({
+            self._index_of(r) for r in range(self.table.rowCount())
+            if not self.table.isRowHidden(r) and self._index_of(r) is not None
+        })
 
     def _invert(self) -> None:
-        current = set(self.surface.selection)
-        self._set_rows(set(range(self.table.rowCount())) - current)
+        self._set_indices(self._all_indices() - set(self.surface.selection))
 
     def _apply_filter(self, text: str) -> None:
         needle = text.strip().lower()
@@ -215,10 +315,16 @@ class AtlasTab(QWidget):
     # -- picking ---------------------------------------------------------
 
     def highlight(self, index: int) -> None:
-        """Select and scroll to the row for a compartment picked in the canvas."""
-        if 0 <= index < self.table.rowCount():
-            self.table.selectRow(index)
-            self.table.scrollToItem(self.table.item(index, 1))
+        """Select and scroll to the row for a compartment picked in the canvas.
+
+        Found by index rather than assumed to BE the index: after a sort
+        the two differ, and picking used to jump to whatever glomerulus
+        happened to occupy that row.
+        """
+        row = self._row_of(index)
+        if row is not None:
+            self.table.selectRow(row)
+            self.table.scrollToItem(self.table.item(row, NAME_COL))
 
 
 class CompartmentPanel(QTabWidget):
@@ -227,12 +333,16 @@ class CompartmentPanel(QTabWidget):
         self.viewer = viewer
         self.tabs: dict[str, AtlasTab] = {}
         contours = contours or {}
+        # Read once for the whole panel: every tab joins against the same
+        # table, and it is a 62-row csv.
+        annotation = reference.load(registry.root) if registry else {}
         for name, surface in surfaces.items():
             atlas = registry.atlases.get(name) if registry else None
             tab = AtlasTab(
                 surface,
                 compartments=atlas.compartments if atlas else None,
                 contour=contours.get(name),
+                annotation=annotation,
             )
             self.tabs[name] = tab
             self.addTab(tab, name[:20])

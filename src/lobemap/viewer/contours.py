@@ -46,6 +46,12 @@ class ContourOverlay:
         #: with several atlases loaded every glomerulus would be written two
         #: or three times over, so labels are opt-in per glomerulus.
         self.labels: set[int] = set()
+        #: Compartments drawn as filled polygons rather than open paths.
+        #: A napari `path` cannot be filled at all -- it is an open
+        #: polyline -- so filling means changing the shape type, not just
+        #: the face colour. Mesh-plane intersections are closed loops, so
+        #: reading them as polygons is geometrically honest.
+        self.filled: set[int] = set()
         self.color = color
         #: Per-compartment RGBA, taken from the Surface layer, so a
         #: glomerulus outline and its label are the colour of its own mesh
@@ -159,6 +165,24 @@ class ContourOverlay:
             return self.color
         return {"array": colors, "default": self.color}
 
+    FILL_ALPHA = 0.35
+
+    def _face_colors(self, owners):
+        """Per-shape face colour: the mesh colour, faded, or transparent."""
+        out = []
+        for i in owners:
+            if i in self.filled:
+                rgba = (self.colors[i] if self.colors is not None
+                        and 0 <= i < len(self.colors) else self.color)
+                out.append((float(rgba[0]), float(rgba[1]), float(rgba[2]),
+                            self.FILL_ALPHA))
+            else:
+                out.append((0.0, 0.0, 0.0, 0.0))
+        return out
+
+    def _shape_types(self, owners):
+        return ["polygon" if i in self.filled else "path" for i in owners]
+
     def _colors_for(self, owners):
         """One RGBA per shape, from the compartment that shape came from."""
         if self.colors is None:
@@ -186,8 +210,9 @@ class ContourOverlay:
         if paths:
             self.layer.add(
                 paths,
-                shape_type="path",
+                shape_type=self._shape_types(owners),
                 edge_color=self._colors_for(owners),
+                face_color=self._face_colors(owners),
                 edge_width=self.width,
             )
         # Text after data: napari requires one string per shape, so setting it
@@ -226,6 +251,14 @@ class ContourOverlay:
     def set_labels(self, indices) -> None:
         """Choose which compartments write their name on the slice."""
         self.labels = set(indices)
+        self.refresh()
+
+    def set_fill(self, index: int, on: bool) -> None:
+        self.filled.add(index) if on else self.filled.discard(index)
+        self.refresh()
+
+    def set_fills(self, indices) -> None:
+        self.filled = set(indices)
         self.refresh()
 
     def set_label(self, index: int, on: bool) -> None:
