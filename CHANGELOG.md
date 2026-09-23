@@ -25,6 +25,8 @@
 
 ### Added
 
+- The `canonical` column appears only on atlases that disagree with their space's vocabulary somewhere, and a disagreeing entry is red. Three of the six atlases carry it: the Schlegel rename chain in hemibrain, the VM6 split in S11, Grabe's VP1 merge. Compared on the bare glomerulus, so `AL-DA1(R)` against `DA1` is agreement rather than 77 red rows.
+- The filter searches every text column, annotation included, and the placeholder says so — it named only name, canonical and side while already searching the rest.
 - The panel buttons sit in two aligned rows — `Filtered`, `Show all`, `Label all`, `Fill all` above `Invert`, `Show none`, `Label none`, `Fill none` — so each column pairs an action with its opposite. `All` and `None` are renamed `Show all` and `Show none`: they were named before `Label` and `Fill` had pairs of their own, and no longer said which of the three they acted on.
 - `Fill all` and `Fill none` buttons, beside `Label all` / `Label none`. `Fill all` fills whatever is currently visible, matching how `Label all` behaves.
 - A neuropil layer's tab drops the columns that only describe a glomerulus and names its column `neuropil`. It has no compartments behind it, so canonical, side and the five annotation columns were blank while the header claimed the table was about glomeruli. `label` and `fill` stay and still work.

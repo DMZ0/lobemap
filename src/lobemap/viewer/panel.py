@@ -59,6 +59,38 @@ ATLAS_ONLY = (CANONICAL_COL, 3, *range(REF_COL0, 6 + len(REF_COLUMNS)))
 #: the visual row is no longer the compartment id and nothing may assume it.
 INDEX_ROLE = Qt.UserRole
 
+#: Canonical names that are not just the published name. Red because these
+#: are the rows where the atlas and its space disagree about what a
+#: glomerulus is called -- a rename, a merge or a split -- and reading the
+#: table without noticing them is how the two get conflated.
+DISAGREE_COLOR = "#ff6b6b"
+
+
+def wants_canonical(compartments) -> bool:
+    """Whether this atlas needs the canonical column at all.
+
+    For most atlases it repeats the glomerulus name on every row and says
+    nothing. It earns its place only where the atlas disagrees with its
+    space's vocabulary somewhere -- a rename, a merge or a split.
+    """
+    return any(
+        _disagrees(c.published_name, c.canonical) for c in compartments
+    )
+
+
+def _disagrees(published: str, canonical) -> bool:
+    """True when the canonical name is not simply the published one.
+
+    Compared on the BARE glomerulus: `AL-DA1(R)` and `DA1` are the same
+    glomerulus written two ways, and marking every hemibrain row red would
+    say nothing. An empty canonical is a gap, not a disagreement.
+    """
+    from ..core.names import parse_roi
+
+    if not canonical:
+        return False
+    return tuple(canonical) != (parse_roi(published)[0],)
+
 
 def _natural_key(text: str):
     """DA10 after DA9, not between DA1 and DA2."""
@@ -87,6 +119,8 @@ class AtlasTab(QWidget):
         #: that describe a glomerulus.
         self.is_atlas = is_atlas
         self.compartments = list(compartments or [])
+        #: Whether this atlas needs the canonical column at all.
+        self.show_canonical = wants_canonical(self.compartments)
         #: Glomerulus name -> annotation, from `core.reference`. Empty when
         #: the reference table is absent, which only empties those columns.
         self.reference = annotation or {}
@@ -96,7 +130,10 @@ class AtlasTab(QWidget):
         layout.setContentsMargins(4, 4, 4, 4)
 
         self.filter = QLineEdit()
-        self.filter.setPlaceholderText("filter by name, canonical or side")
+        # It has always searched every text column, not just those three.
+        self.filter.setPlaceholderText(
+            "filter: name, canonical, side, receptor, sensillum, organ..."
+        )
         self.filter.textChanged.connect(self._apply_filter)
         layout.addWidget(self.filter)
 
@@ -140,6 +177,8 @@ class AtlasTab(QWidget):
         if not is_atlas:
             for col in ATLAS_ONLY:
                 self.table.setColumnHidden(col, True)
+        if not self.show_canonical:
+            self.table.setColumnHidden(CANONICAL_COL, True)
 
         by_index = {c.local_id: c for c in self.compartments}
         # Sorting must be off while the rows are built, or Qt reorders them
@@ -163,7 +202,14 @@ class AtlasTab(QWidget):
             label.setData(INDEX_ROLE, row)
             self.table.setItem(row, NAME_COL, label)
             canonical = ", ".join(comp.canonical) if comp else ""
-            self.table.setItem(row, CANONICAL_COL, _Cell(canonical))
+            canon_cell = _Cell(canonical)
+            if comp and _disagrees(name, comp.canonical):
+                canon_cell.setForeground(QColor(DISAGREE_COLOR))
+                canon_cell.setToolTip(
+                    f"{name} is recorded as {canonical} "
+                    f"({comp.relation}) in this space's vocabulary"
+                )
+            self.table.setItem(row, CANONICAL_COL, canon_cell)
             self.table.setItem(row, 3, _Cell((comp.side or "") if comp else ""))
 
             tips = {
@@ -227,9 +273,15 @@ class AtlasTab(QWidget):
         return None
 
     def _row_text(self, row: int) -> str:
+        """Everything on this row that is text.
+
+        Every column except the three checkboxes, which carry no text and
+        so contribute nothing -- there is no sense in filtering on `fill`.
+        """
         return " ".join(
             (self.table.item(row, c).text() if self.table.item(row, c) else "")
             for c in range(1, len(COLUMNS))
+            if c not in (LABEL_COL, FILL_COL)
         ).lower()
 
     def _push(self, selection: set[int]) -> None:

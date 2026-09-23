@@ -209,13 +209,17 @@ def test_a_neuropil_layer_is_not_described_as_glomeruli(fafb_tabs):
     assert _visible_headers(tab) == ["", "neuropil", "label", "fill"]
 
 
-def test_an_atlas_layer_keeps_every_column(fafb_tabs):
+def test_an_atlas_layer_keeps_its_columns(fafb_tabs):
     tab = fafb_tabs["benton2025"]
     assert tab.is_atlas is True
     headers = _visible_headers(tab)
     assert headers[1] == "glomerulus"
-    for expected in ("canonical", "side", "receptor(s)", "co-receptor(s)"):
+    for expected in ("side", "label", "fill", "receptor(s)", "co-receptor(s)"):
         assert expected in headers
+    # `canonical` is the one conditional column: Benton agrees with FAFB's
+    # vocabulary everywhere, so it would repeat the name on all 58 rows.
+    assert tab.show_canonical is False
+    assert "canonical" not in headers
 
 
 def test_fill_and_label_still_work_on_a_neuropil_tab(fafb_tabs):
@@ -338,3 +342,91 @@ def test_show_all_and_show_none_still_drive_visibility(fafb_tabs):
     assert tab.surface.selection == set()
     by_text["Show all"].click()
     assert tab.surface.selection == set(range(n))
+
+
+def _canonical_cells(tab):
+    from lobemap.viewer.panel import CANONICAL_COL, NAME_COL
+
+    return {
+        tab.table.item(r, NAME_COL).text(): tab.table.item(r, CANONICAL_COL)
+        for r in range(tab.table.rowCount())
+    }
+
+
+def test_a_disagreeing_canonical_is_red(tab):
+    """hemibrain carries the Schlegel rename chain: VC3l -> VC3 and so on."""
+    from lobemap.viewer.panel import DISAGREE_COLOR
+
+    cells = _canonical_cells(tab)
+    red = {n: c.text() for n, c in cells.items()
+           if c.foreground().color().name() == DISAGREE_COLOR}
+    assert len(red) == 3, red
+    assert all(c.text() for c in cells.values()), "canonical went blank"
+    # And the ones that agree are left alone.
+    plain = [n for n, c in cells.items()
+             if c.foreground().color().name() != DISAGREE_COLOR]
+    assert len(plain) > 70, len(plain)
+
+
+def test_a_bare_name_matching_its_canonical_is_not_red(tab):
+    """`AL-DA1(R)` and `DA1` are one glomerulus written two ways.
+
+    Comparing the strings directly would paint every hemibrain row red
+    and so say nothing at all.
+    """
+    from lobemap.viewer.panel import DISAGREE_COLOR
+
+    cells = _canonical_cells(tab)
+    da1 = next(c for n, c in cells.items() if "DA1(" in n.upper())
+    assert da1.text() == "DA1"
+    assert da1.foreground().color().name() != DISAGREE_COLOR
+
+
+def test_the_canonical_column_only_appears_where_it_says_something(registry):
+    """Per atlas: S12 shares a space with two that disagree but has none
+    of its own, so it does not carry the column."""
+    import napari
+
+    from lobemap.viewer.app import build_scene
+    from lobemap.viewer.panel import CANONICAL_COL, CompartmentPanel
+
+    expected = {
+        "FAFB14": {"benton2025": False},
+        "JRCFIB2018F": {"neuprint_hemibrain": True, "schlegel2021_s11": True,
+                        "schlegel2021_s12": False},
+        "JRCFIB2022M": {"neuprint_cns": False},
+        "GRABE": {"grabe2015": True},
+    }
+    for space, wanted in expected.items():
+        try:
+            viewer = napari.Viewer(show=False, ndisplay=3)
+        except Exception as exc:                    # pragma: no cover
+            pytest.skip(f"no Qt display: {exc}")
+        try:
+            surfaces, contours = build_scene(viewer, registry, space)
+            panel = CompartmentPanel(viewer, surfaces, registry=registry,
+                                     contours=contours)
+            for name, want in wanted.items():
+                t = panel.tabs[name]
+                assert (not t.table.isColumnHidden(CANONICAL_COL)) == want, (
+                    f"{space}/{name}: canonical shown={not want}"
+                )
+        finally:
+            viewer.close()
+
+
+def test_the_filter_reaches_every_text_column(tab):
+    """Not just name/canonical/side: the annotation columns too."""
+    def shown(needle):
+        tab._apply_filter(needle)
+        n = sum(1 for r in range(tab.table.rowCount())
+                if not tab.table.isRowHidden(r))
+        tab._apply_filter("")
+        return n
+
+    assert shown("Or67d") == 1, "receptor column not searched"
+    assert shown("Orco") > 10, "co-receptor column not searched"
+    assert shown("antenna") > 10, "organ column not searched"
+    assert shown("Ab9A") >= 1, "sensillum column not searched"
+    assert shown("DA1") >= 1, "name column not searched"
+    assert shown("zzzz") == 0
