@@ -431,3 +431,72 @@ def test_the_filter_reaches_every_text_column(tab):
     assert shown("Ab9A") >= 1, "sensillum column not searched"
     assert shown("DA1") >= 1, "name column not searched"
     assert shown("zzzz") == 0
+
+
+@pytest.fixture
+def session(registry):
+    """A full FAFB session, so the display-mode hook is installed."""
+    import napari
+
+    from lobemap.viewer.app import load_space
+
+    try:
+        viewer = napari.Viewer(show=False, ndisplay=3)
+    except Exception as exc:                        # pragma: no cover
+        pytest.skip(f"no Qt display: {exc}")
+    try:
+        yield viewer, load_space(viewer, registry, "FAFB14", fit=False)
+    finally:
+        viewer.close()
+
+
+@pytest.mark.parametrize("layer", ["fafb_neuropil", "benton2025"])
+def test_showing_in_2d_draws_contours_not_meshes(session, layer):
+    """The bug: `Show all` in 2D switched the mesh on under the slice.
+
+    `AtlasSurface.refresh` turns its layer on whenever anything is
+    selected, which is right in 3D. The display-mode hook only fires on an
+    `ndisplay` change, so nothing put the mesh back.
+    """
+    viewer, sess = session
+    tab = sess.panel.tabs[layer]
+    if tab.contour is None:
+        pytest.skip("no contour overlay")
+    viewer.dims.ndisplay = 2
+
+    tab._all()
+    assert tab.surface.layer.visible is False, "mesh switched on in 2D"
+    assert tab.contour.layer.visible is True, "contours left off in 2D"
+
+    tab._none()
+    assert tab.surface.layer.visible is False
+    assert tab.contour.layer.visible is False
+
+
+@pytest.mark.parametrize("layer", ["fafb_neuropil", "benton2025"])
+def test_a_single_checkbox_obeys_the_mode_too(session, layer):
+    """`set_visible` bypassed `_push`, so fixing the buttons left this."""
+    from qtpy.QtCore import Qt
+
+    from lobemap.viewer.panel import VISIBLE_COL
+
+    viewer, sess = session
+    tab = sess.panel.tabs[layer]
+    if tab.contour is None:
+        pytest.skip("no contour overlay")
+    viewer.dims.ndisplay = 2
+    tab._none()
+
+    tab.table.item(0, VISIBLE_COL).setCheckState(Qt.Checked)
+    assert tab.surface.layer.visible is False, "mesh switched on in 2D"
+    assert tab.contour.layer.visible is True
+
+
+def test_3d_still_shows_the_mesh(session):
+    viewer, sess = session
+    tab = sess.panel.tabs["benton2025"]
+    viewer.dims.ndisplay = 3
+    tab._all()
+    assert tab.surface.layer.visible is True
+    if tab.contour is not None:
+        assert tab.contour.layer.visible is False

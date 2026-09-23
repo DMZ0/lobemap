@@ -285,10 +285,41 @@ class AtlasTab(QWidget):
         ).lower()
 
     def _push(self, selection: set[int]) -> None:
+        """Show these compartments in whichever layer the mode can draw.
+
+        `AtlasSurface.refresh` turns its layer on whenever something is
+        selected, which is right in 3D and wrong in 2D: the display-mode
+        hook only fires on an `ndisplay` change, so nothing was putting
+        the mesh back. Ticking `Show all` in 2D switched the mesh on
+        underneath the slice, and left the contours -- the thing 2D can
+        actually draw -- off.
+
+        Only when a contour overlay exists. Without one the mesh is what
+        2D shows as well, which is the `USE_SLICE_CONTOURS = False` case
+        `install_display_mode` also defers to.
+        """
         self.surface.set_selection(selection)
+        self._apply_mode_visibility()
         if self.contour is not None:
             self.contour.set_selection(selection)
         self._update_count()
+
+    def _apply_mode_visibility(self) -> None:
+        """Put the selection in whichever layer the current mode can draw.
+
+        Called from both routes into the layer -- the bulk buttons and a
+        single row's checkbox -- because `set_visible` bypassed `_push`
+        and so kept the bug after the buttons were fixed.
+
+        Visibility is set BEFORE the overlay refreshes: its refresh
+        returns early while the layer is hidden and would redraw nothing.
+        """
+        if self.contour is None:
+            return
+        three_d = self.surface.viewer.dims.ndisplay == 3
+        on = bool(self.surface.selection)
+        self.surface.layer.visible = three_d and on
+        self.contour.layer.visible = (not three_d) and on
 
     def _update_count(self) -> None:
         self.count.setText(
@@ -314,6 +345,7 @@ class AtlasTab(QWidget):
         index = int(item.data(INDEX_ROLE))
         visible = item.checkState() == Qt.Checked
         self.surface.set_visible(index, visible)
+        self._apply_mode_visibility()
         if self.contour is not None:
             self.contour.set_selection(self.surface.selection)
         self._update_count()
