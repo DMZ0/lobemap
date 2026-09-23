@@ -20,7 +20,7 @@ from qtpy.QtCore import Qt
 from qtpy.QtGui import QColor
 from qtpy.QtWidgets import (
     QAbstractItemView,
-    QHBoxLayout,
+    QGridLayout,
     QHeaderView,
     QLabel,
     QLineEdit,
@@ -100,20 +100,25 @@ class AtlasTab(QWidget):
         self.filter.textChanged.connect(self._apply_filter)
         layout.addWidget(self.filter)
 
-        buttons = QHBoxLayout()
-        for label, slot in (
-            ("All", self._all),
-            ("None", self._none),
-            ("Filtered", self._filtered_only),
-            ("Invert", self._invert),
-            ("Label all", self._labels_for_shown),
-            ("Label none", self._no_labels),
-            ("Fill all", self._fill_for_shown),
-            ("Fill none", self._no_fill),
-        ):
-            button = QPushButton(label)
-            button.clicked.connect(slot)
-            buttons.addWidget(button)
+        # A grid rather than two rows of boxes, so each pair lines up in
+        # its own column: the button below a given one is always its
+        # opposite. `Show` names what the checkbox in column 0 does, which
+        # `All`/`None` left to be guessed now that `Label` and `Fill` have
+        # their own pairs.
+        buttons = QGridLayout()
+        buttons.setSpacing(4)
+        for col, (top, bottom) in enumerate((
+            (("Filtered", self._filtered_only), ("Invert", self._invert)),
+            (("Show all", self._all), ("Show none", self._none)),
+            (("Label all", self._labels_for_shown),
+             ("Label none", self._no_labels)),
+            (("Fill all", self._fill_for_shown), ("Fill none", self._no_fill)),
+        )):
+            for row, (label, slot) in enumerate((top, bottom)):
+                button = QPushButton(label)
+                button.clicked.connect(slot)
+                buttons.addWidget(button, row, col)
+            buttons.setColumnStretch(col, 1)
         layout.addLayout(buttons)
 
         self.table = QTableWidget(surface.meshset.n_compartments, len(COLUMNS))

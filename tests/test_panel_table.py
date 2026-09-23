@@ -301,3 +301,40 @@ def test_fill_buttons_track_the_checkboxes(fafb_tabs):
     states = {tab.table.item(r, FILL_COL).checkState()
               for r in range(tab.table.rowCount())}
     assert states == {Qt.Unchecked}, "Fill none left boxes ticked"
+
+
+def test_the_buttons_are_two_aligned_rows(fafb_tabs):
+    """Each column pairs an action with its opposite, top and bottom."""
+    from qtpy.QtWidgets import QGridLayout
+
+    tab = fafb_tabs["benton2025"]
+    grid = next(iter(tab.findChildren(QGridLayout)))
+    placed: dict[int, dict[int, str]] = {}
+    for i in range(grid.count()):
+        row, col, _, _ = grid.getItemPosition(i)
+        placed.setdefault(row, {})[col] = grid.itemAt(i).widget().text()
+
+    assert [placed[0][c] for c in sorted(placed[0])] == [
+        "Filtered", "Show all", "Label all", "Fill all"
+    ]
+    assert [placed[1][c] for c in sorted(placed[1])] == [
+        "Invert", "Show none", "Label none", "Fill none"
+    ]
+
+
+def test_show_all_and_show_none_still_drive_visibility(fafb_tabs):
+    """Renaming must not have detached them from their slots."""
+    from qtpy.QtWidgets import QGridLayout, QPushButton
+
+    tab = fafb_tabs["benton2025"]
+    grid = next(iter(tab.findChildren(QGridLayout)))
+    by_text = {
+        grid.itemAt(i).widget().text(): grid.itemAt(i).widget()
+        for i in range(grid.count())
+        if isinstance(grid.itemAt(i).widget(), QPushButton)
+    }
+    n = tab.table.rowCount()
+    by_text["Show none"].click()
+    assert tab.surface.selection == set()
+    by_text["Show all"].click()
+    assert tab.surface.selection == set(range(n))

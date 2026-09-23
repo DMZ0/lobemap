@@ -25,6 +25,7 @@
 
 ### Added
 
+- The panel buttons sit in two aligned rows — `Filtered`, `Show all`, `Label all`, `Fill all` above `Invert`, `Show none`, `Label none`, `Fill none` — so each column pairs an action with its opposite. `All` and `None` are renamed `Show all` and `Show none`: they were named before `Label` and `Fill` had pairs of their own, and no longer said which of the three they acted on.
 - `Fill all` and `Fill none` buttons, beside `Label all` / `Label none`. `Fill all` fills whatever is currently visible, matching how `Label all` behaves.
 - A neuropil layer's tab drops the columns that only describe a glomerulus and names its column `neuropil`. It has no compartments behind it, so canonical, side and the five annotation columns were blank while the header claimed the table was about glomeruli. `label` and `fill` stay and still work.
 - Table columns size to their widest cell rather than a fixed width, which was truncating the long receptor lists and padding the short ones.
