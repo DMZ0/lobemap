@@ -25,6 +25,25 @@ _SIDE_RE = re.compile(r"(?:\((?P<paren>[LR])\)|_(?P<under>[LR]))$")
 _PREFIX_RE = re.compile(r"^AL[-_](?=.)")
 
 
+#: neuPrint's neuropil qualifier, e.g. `AL-DA1(R)`.
+_AL_PREFIX = re.compile(r"^AL-")
+
+
+def display_name(roi: str) -> str:
+    """A compartment name as the viewer should show it.
+
+    neuPrint qualifies every glomerulus with the neuropil it sits in --
+    `AL-DA1(R)` -- which is redundant in a table of nothing but antennal
+    lobe glomeruli, and made those two atlases sort and read differently
+    from the four that do not do it.
+
+    Display only. The nomenclature table is keyed by the published name
+    and the mesh container still carries it, so both keep the prefix and
+    `lobemap audit` still matches against the source exactly.
+    """
+    return _AL_PREFIX.sub("", roi.strip())
+
+
 def parse_roi(roi: str) -> tuple[str, str | None]:
     """Split a neuPrint-style ROI name into (glomerulus, side).
 

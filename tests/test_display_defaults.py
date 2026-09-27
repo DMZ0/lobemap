@@ -83,7 +83,7 @@ def test_categorical_colours_are_still_distinct():
 
 def test_stain_defaults():
     spec = display_for("virtual_stain")
-    assert spec["colormap"] == "magenta"
+    assert spec["colormap"] == "gray"
     assert spec["gamma"] == 0.7
     assert spec["rendering"] == "attenuated_mip"
     assert spec["attenuation"] == 0.1

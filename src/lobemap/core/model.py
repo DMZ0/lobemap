@@ -39,8 +39,8 @@ Side = Literal["L", "R"]
 #: registrations therefore preserve APPARENT side, not biological side.
 LateralConvention = Literal["biological", "mirrored"]
 
-#: Signed axis references, as used by `Space.anterior` and `Space.dorsal`:
-#: "-z" means the negative z direction points anterior.
+#: Signed axis references, as a rotation axis may be given:
+#: "-z" means the negative z direction.
 _AXIS_INDEX = {"x": 0, "y": 1, "z": 2}
 
 
@@ -59,48 +59,129 @@ def axis_vector(spec: str):
 
 
 def anatomical_axes(space):
-    """Pole name -> unit vector, for a space that declares its axes.
+    """Pole -> unit vector, in this space's array coordinates, or None.
 
-    Returns A/P, D/V and R/L, or None when the space declares no axes -- the
-    same rule the camera follows, since a frame built from one axis alone
-    would put lateral in an arbitrary place.
+    None when the space declares no rotation, which is the only way to
+    declare anatomy here.
 
-    R always points at the BIOLOGICAL right hemisphere. For a biological
-    space that is `cross(anterior, dorsal)`, measured against the declared
-    sides of every atlas carrying both: dot +0.98 (hemibrain), +0.99 (male
-    CNS), +0.99 (Grabe).
-
-    **A mirrored space negates it**, and getting this wrong is silent. FAFB's
-    image data is left-right inverted, so apparent and biological sides come
-    apart there. Every side label in the catalogue is BIOLOGICAL even so:
-    FlyWire's neuropil annotations are the modern, post-correction ones, so
-    `AL_L` really is the left lobe, and Benton declares side L because all
-    58 of its glomerulus centroids sit inside that `AL_L` shell and none
-    inside `AL_R`.
-
-    `cross(anterior, dorsal)` runs from `AL_R` toward `AL_L` in FAFB, so
-    unnegated it would point at the biological LEFT -- the arrow would be
-    exactly reversed in the one space where nobody could check it against a
-    second lobe, because FAFB's atlases cover only one.
+    R points at the BIOLOGICAL right. The declared rotation's third
+    column is the pole a right-handed triad can show, which is LEFT in
+    a mirrored space, so the two differ by a sign there -- and getting
+    it wrong is silent, since nothing about a single lobe looks wrong
+    on its own.
     """
-    import numpy as np
 
-    if not (space.anterior and space.dorsal):
+    rot = anatomical_rotation_matrix(space)
+    if rot is None:
         return None
-    anterior = axis_vector(space.anterior)
-    dorsal = axis_vector(space.dorsal)
-    right = np.cross(anterior, dorsal)
-    if space.is_mirrored:
-        right = -right
-    return {
-        "A": anterior, "P": -anterior,
-        "D": dorsal, "V": -dorsal,
-        "R": right, "L": -right,
-    }
+    a, d, lat = rot[:, 0], rot[:, 1], rot[:, 2]
+    r = -lat if space.is_mirrored else lat
+    return {"A": a, "P": -a, "D": d, "V": -d, "R": r, "L": -r}
 
 
 #: The three axes, as (positive pole, negative pole, label).
 AXIS_POLES = (("A", "P", "A-P"), ("D", "V", "D-V"), ("R", "L", "L-R"))
+
+
+def rotation_axis_vector(space):
+    """Unit vector for a space's declared rotation axis, or None.
+
+    A signed array axis ("+x") or a raw vector, both in ARRAY
+    coordinates. Not a pole name: the poles are what this rotation
+    defines, so naming one would be circular.
+    """
+    import numpy as np
+
+    spec = space.anatomical_rotation_axis
+    if spec is None:
+        return None
+    if isinstance(spec, str):
+        return axis_vector(spec)
+    v = np.asarray(spec, dtype=float)
+    n = float(np.linalg.norm(v))
+    return None if n == 0 else v / n
+
+
+def anatomical_rotation_matrix(space):
+    """The declared rotation as a matrix, or None if none is declared.
+
+    Its columns are the anterior, dorsal and lateral directions, so this
+    is also exactly what the axis triad needs: arrow i is drawn along
+    +e_i and lands on column i, the pole `axis_labels_for` writes on it.
+    """
+    import numpy as np
+
+    axis = rotation_axis_vector(space)
+    if axis is None or space.anatomical_rotation_deg is None:
+        return None
+    t = np.radians(float(space.anatomical_rotation_deg))
+    K = np.array([[0.0, -axis[2], axis[1]],
+                  [axis[2], 0.0, -axis[0]],
+                  [-axis[1], axis[0], 0.0]])
+    return np.eye(3) + np.sin(t) * K + (1.0 - np.cos(t)) * (K @ K)
+
+
+def anatomical_triad(space):
+    """(matrix, labels) for the anatomical triad, or None.
+
+    The columns are the three anatomical directions and the labels name
+    the pole each one points at, so arrow k reaches the pole written on
+    it. Which pole of each axis, and which arrow carries which axis, are
+    chosen so that no anatomical arrow lands near ANY arrow of the
+    fixed x/y/z triad it is drawn beside: of the 24 proper candidates,
+    the one whose closest approach to a world arrow is furthest away.
+
+    The world arrows are only the POSITIVE directions -- napari draws
+    each along increasing index and cannot reverse one -- which is what
+    makes the sign choice bite. Against a full set of plus-and-minus
+    axes the distance to the nearest would be fixed by the anatomy and
+    nothing here could improve it; against three positive arrows,
+    flipping A to P swings an arrow from 17 degrees off +z to 162.
+
+    Two earlier objectives were worse. Nearest-to-its-own-axis put the
+    two triads almost on top of each other. Furthest-from-its-own-axis
+    maximised a SUM, so it bought two near-reversals by leaving a third
+    arrow 17 degrees from its counterpart -- and neither looked at the
+    other two world arrows at all.
+
+    Right-handed by construction -- improper candidates are skipped --
+    so the triad is one a rotation can actually draw.
+    """
+    import itertools
+
+    import numpy as np
+
+    frame = anatomical_axes(space)
+    if frame is None:
+        return None
+    poles = [("A", "P"), ("D", "V"), ("R", "L")]
+    vectors = [np.asarray(frame[p[0]], float) for p in poles]
+
+    best = None
+    for order in itertools.permutations(range(3)):
+        for signs in itertools.product((1, -1), repeat=3):
+            cols = [signs[k] * vectors[order[k]] for k in range(3)]
+            M = np.column_stack(cols)
+            if np.linalg.det(M) < 0:
+                continue                 # a reflection; not drawable
+            # Closest approach to ANY world arrow, which is the worst
+            # over columns of the best over the three positive axes.
+            # cos is decreasing in angle, so the largest component is
+            # the nearest arrow and we want that as small as possible.
+            closest = max(float(np.max(M[:, k])) for k in range(3))
+            # Tie-break on the trace, so that among equally separated
+            # candidates the arrow order stays the settled one.
+            score = (-closest, float(np.trace(M)))
+            if best is None or score > best[0]:
+                names = tuple(poles[order[k]][0 if signs[k] > 0 else 1]
+                              for k in range(3))
+                best = (score, M, names)
+    return None if best is None else (best[1], best[2])
+
+
+def lateral_pole(space) -> str:
+    """Which lateral pole a right-handed triad can show here."""
+    return "L" if space.is_mirrored else "R"
 
 
 def flip_side(side):
@@ -144,14 +225,29 @@ class Space:
     units: Units
     flybrains_template: str | None = None
     lateral_convention: LateralConvention = "biological"
-    #: Which signed array axis points anterior, and which dorsal, as "-z" /
-    #: "+y". These differ BETWEEN spaces -- hemibrain's antero-posterior axis
-    #: is y where FAFB's and the male CNS's is z -- so they are declared per
-    #: space rather than assumed. Both are needed to orient a camera; with
-    #: only one the roll would be a guess, so the viewer leaves the camera
-    #: alone instead.
-    anterior: str | None = None
-    dorsal: str | None = None
+    #: The anatomy of this space, and the only thing that states it:
+    #: the rotation carrying the ARRAY axes onto (anterior, dorsal,
+    #: lateral), as an axis in array coordinates and an angle in
+    #: degrees. +x goes to anterior, +y to dorsal, +z to the lateral
+    #: pole -- RIGHT in an ordinary space, LEFT in a mirrored one.
+    #:
+    #: Which lateral pole is not a choice. napari draws its three arrows
+    #: along +x, +y, +z -- right-handed -- and the viewer can only turn
+    #: them. det[A, D, R] is +1 and det[A, D, L] is -1, so an ordinary
+    #: space can only be shown as (A, D, R); a mirrored one has array
+    #: space reflected, which inverts both, so it can only be (A, D, L).
+    #:
+    #: There used to be `anterior` and `dorsal` as well, naming a signed
+    #: array axis each. They were the anatomy before it was measured,
+    #: and afterwards they were only ever the NEAREST array axis to it
+    #: -- a second, coarser answer to a question this already answers
+    #: exactly. Slicing never read them (see `DIMS_ORDER_XYZ`), so only
+    #: the camera did, and it is better off with the exact directions.
+    #:
+    #: Axis-angle rather than a matrix, because any axis and any angle
+    #: name a proper rotation: nothing writable here is ill-formed.
+    anatomical_rotation_axis: str | tuple[float, float, float] | None = None
+    anatomical_rotation_deg: float | None = None
     #: Which of this space's atlases is shown when it opens. The others
     #: are loaded and listed, just switched off: a space holds every atlas
     #: native to it, and two glomerular parcellations drawn on top of each

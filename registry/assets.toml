@@ -130,7 +130,9 @@ space = "GRABE"
 kind = "image"
 side = "both"
 path = "data/grabe2015_stack.npz"
-display = { colormap = "magenta", gamma = 0.7, attenuation = 0.1 }
+# Grey like the stains, and for the same reason: it sits under the
+# glomerulus meshes. Only gamma and attenuation are worth overriding.
+display = { colormap = "gray", gamma = 0.7, attenuation = 0.1 }
 [grabe2015_stack.source]
 doi = "10.1016/j.cub.2015.07.036"
 

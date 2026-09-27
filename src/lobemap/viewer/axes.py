@@ -55,31 +55,22 @@ import contextlib
 
 import numpy as np
 
-from ..core.model import AXIS_POLES, anatomical_axes
+from ..core.model import (
+    anatomical_triad,
+)
 
 
 def axis_labels_for(space) -> tuple[str, ...] | None:
-    """Anatomical names for the three ARRAY axes, in array order.
+    """The pole each ANATOMICAL arrow points at, in arrow order.
 
-    Each array axis carries exactly one anatomical axis here -- the spaces
-    declare anterior and dorsal as signed array axes, so the frame is
-    axis-aligned by construction -- which is what makes this possible at all.
-
-    Each label is the pole that axis's arrow points at, so it describes
-    the arrow rather than the axis: an arrow running toward posterior is
-    labelled `P`, not `A-P` or `A->P`.
+    Chosen with the arrows themselves, to put each as near as it can be
+    to its own world basis vector -- see `core.model.anatomical_triad`.
+    So these move with the angle, and a space turned far enough reports
+    a different set. They name the second triad only; napari's own is
+    always x/y/z.
     """
-    frame = anatomical_axes(space)
-    if frame is None:
-        return None
-    names = ["?", "?", "?"]
-    for positive, negative, _label in AXIS_POLES:
-        vector = frame[positive]
-        axis = int(np.argmax(np.abs(vector)))
-        # The arrow runs along INCREASING index, so it reaches `positive`
-        # when this axis points that way and `negative` when it does not.
-        names[axis] = positive if vector[axis] > 0 else negative
-    return tuple(names)
+    triad = anatomical_triad(space)
+    return None if triad is None else triad[1]
 
 
 def label_viewer_axes(viewer, space) -> bool:
@@ -126,7 +117,173 @@ def label_viewer_axes(viewer, space) -> bool:
     return True
 
 
+def _vispy_axes_overlay(viewer):
+    """napari's own axes OVERLAY, or None.
+
+    Reached through the canvas's overlay map rather than rebuilt, because
+    the whole point is to keep napari's triad -- its geometry, arrowheads,
+    colours, sizing and font -- and change only where it points.
+    """
+    model = None
+    for holder in ("canvas", "scene"):
+        container = getattr(getattr(viewer, holder, None), "overlays", None)
+        if container is not None:
+            with contextlib.suppress(Exception):
+                model = container["axes"]
+            if model is not None:
+                break
+    if model is None:
+        return None
+    canvas = None
+    with contextlib.suppress(Exception):
+        canvas = viewer.window._qt_viewer.canvas
+    if canvas is None:
+        return None
+    for vispy in getattr(canvas, "_viewer_overlay_to_visual", {}).get(model, []):
+        if getattr(getattr(vispy, "node", None), "axes", None) is not None:
+            return vispy
+    return None
+
+
+def _vispy_axes_node(viewer):
+    """The triad visual itself."""
+    overlay = _vispy_axes_overlay(viewer)
+    return None if overlay is None else overlay.node.axes
+
+
+def _table(*hexes):
+    """A vispy colour table from hex colours given for x, y, z.
+
+    Reversed, because the visual indexes the table by `ndim - 1 - axis`
+    rather than by the axis: entry 0 is the LAST array axis. Doubled to
+    six entries, which is the length the visual takes a modulo against.
+    """
+    rows = []
+    for text in hexes:
+        h = text.lstrip("#")
+        rows.append([int(h[i:i + 2], 16) / 255.0 for i in (0, 2, 4)] + [1.0])
+    rows = rows[::-1]
+    return rows + rows
+
+
+#: Okabe-Ito, which stays distinguishable to a colour-blind reader. One
+#: triple names the voxel grid, the other the anatomy, so the two triads
+#: never share a colour.
+VOXEL_COLORS = _table("#56B4E9", "#CC79A7", "#F0E442")
+ANATOMY_COLORS = _table("#D55E00", "#009E73", "#0072B2")
+
+#: napari's triad names the ARRAY axes, which is also what the dimension
+#: sliders step, so these are the labels whatever the display mode.
+VOXEL_LABELS = ("x", "y", "z")
+
+#: Where the second triad is kept. It hangs off napari's own vispy
+#: overlay rather than off the viewer, so it dies with the canvas.
+_ANATOMY_ATTR = "_lobemap_anatomy_axes"
+
+
+def _anatomy_triad(overlay):
+    """The second triad, created on first use.
+
+    A second `Axes` parented into the overlay's own ViewBox, so it
+    shares the origin, the camera and the corner anchoring with
+    napari's -- the two turn together and stay the same size, which is
+    the whole reason for putting it there rather than in the scene.
+    """
+    from napari._vispy.visuals.axes import Axes
+
+    node = getattr(overlay, _ANATOMY_ATTR, None)
+    if node is not None and node.parent is overlay.node.scene:
+        return node
+    node = Axes(font_info=overlay._font_info)
+    node._default_color = ANATOMY_COLORS
+    node.parent = overlay.node.scene
+    setattr(overlay, _ANATOMY_ATTR, node)
+    return node
+
+
+def apply_axis_mode(viewer, space) -> str:
+    """Two triads in 3D; only napari's own in 2D. Returns what is shown.
+
+    napari's triad is left exactly as it comes: the ARRAY axes, x/y/z,
+    cyan/magenta/yellow. The anatomy is a SECOND triad beside it, turned
+    onto the measured frame, red/green/blue, labelled A, D and R or L.
+
+    Two rather than one because they are two different facts and both
+    are worth having. Turning napari's own onto the anatomy, as an
+    earlier version did, left nothing showing where the voxel grid ran
+    -- and in 2D it was worse than nothing, because a slice is cut along
+    array axes, which are 15-31 degrees off the anatomy in every space
+    here, so an anatomical label there claimed an alignment the slice
+    does not have.
+
+    So the anatomical triad is hidden in 2D. What stays is napari's,
+    naming the axes the slider actually steps.
+    """
+    from vispy.visuals.transforms import MatrixTransform, NullTransform
+
+    three_d = getattr(viewer.dims, "ndisplay", 3) == 3
+    triad = anatomical_triad(space)
+    show_anatomy = bool(three_d and triad is not None)
+
+    if getattr(viewer.dims, "ndim", 3) == len(VOXEL_LABELS):
+        # napari TRUNCATES a longer tuple, keeping the tail, so three
+        # labels on a 2D-ndim viewer would land on the wrong axes.
+        with contextlib.suppress(Exception):
+            viewer.dims.axis_labels = VOXEL_LABELS
+
+    # Switching it on is also what makes napari BUILD the visual: it
+    # skips overlays that are not visible and waits on their `visible`
+    # event, so nothing below is reachable until this has happened.
+    for holder in ("canvas", "scene"):
+        container = getattr(getattr(viewer, holder, None), "overlays", None)
+        if container is not None:
+            with contextlib.suppress(Exception):
+                container["axes"].visible = True
+                container["axes"].labels = True
+                break
+
+    overlay = _vispy_axes_overlay(viewer)
+    if overlay is None:
+        return "both" if show_anatomy else "voxel grid"
+
+    with contextlib.suppress(Exception):
+        # napari's own, put back the way it comes in case a previous
+        # version of this turned or recoloured it.
+        overlay.node.axes.transform = NullTransform()
+        overlay.node.axes._default_color = VOXEL_COLORS
+        overlay._on_data_change()
+
+    with contextlib.suppress(Exception):
+        node = _anatomy_triad(overlay)
+        node.visible = show_anatomy
+        if show_anatomy:
+            from napari.utils.theme import get_theme
+
+            # Drawn for the array axes in napari's own order, then
+            # turned; geometry is in vispy's x,y,z, the REVERSE of the
+            # array order the rotation is written in, so conjugate by
+            # that reversal, and vispy multiplies row vectors, so
+            # transpose.
+            node.set_data(axes=(2, 1, 0), reversed_axes=(0, 1, 2),
+                          colored=True,
+                          bg_color=get_theme(viewer.theme).canvas,
+                          dashed=False, arrows=True, text_offset=0.45)
+            matrix, labels = triad
+            flip = np.eye(3)[::-1]
+            mat = np.eye(4)
+            mat[:3, :3] = (flip @ matrix @ flip).T
+            node.transform = MatrixTransform(mat)
+            # Same reversal for the text: arrow k carries array axis
+            # `axes[k]`, so the labels follow that order too.
+            node.text.text = list(labels)[::-1]
+    return "both" if show_anatomy else "voxel grid"
+
+
 __all__ = [
+    "ANATOMY_COLORS",
+    "VOXEL_COLORS",
+    "VOXEL_LABELS",
+    "apply_axis_mode",
     "axis_labels_for",
     "label_viewer_axes",
 ]

@@ -170,14 +170,17 @@ window, against 81% once it waits.
 meshes surfaced from them, so the smoothing can always be checked against
 its input. Stored as npz, not zarr: a pyramid would average label ids.
 
-**The camera faces anterior with dorsal up in 3D**, from per-space
-`anterior`/`dorsal` axes in `spaces.toml`. All four spaces holding an atlas
-declare both, determined twice over and agreeing: from positional glomerulus
-nomenclature (D/V first letter, A/P second, averaged over ~58 centroids,
-0.92–0.99 dominance) and from handedness — the animal's left falls on the
-viewer's right, inverted in FAFB because its image data is. The axes differ
-between spaces: hemibrain's antero-posterior axis is y where FAFB's and the
-male CNS's is z.
+**The camera faces anterior with dorsal up in 3D**, from the per-space
+`anatomical_rotation` in `spaces.toml` — an axis and an angle sending the
+array axes onto (anterior, dorsal, lateral), and the only statement of a
+space's anatomy. Measured against JRC2018U, which is taken as the ground
+truth; no space is axis-aligned, and the camera uses the exact directions
+rather than the nearest array axis to them. See findings.md section 9.
+
+The same rotation draws a second axis triad beside napari's own in 3D:
+napari's names the array axes x/y/z, the second names the anatomy. Only
+napari's is shown in 2D, where a slice is cut along array axes the anatomy
+does not follow.
 
 The camera is turned 1° off axis on purpose (`GIMBAL_NUDGE_DEG`). A face-on
 view is an exact gimbal-lock singularity for the Euler angles napari stores

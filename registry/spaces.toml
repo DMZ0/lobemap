@@ -47,8 +47,19 @@ lateral_convention = "mirrored"
 # FAFB14: names give anterior -z (0.96) and dorsal -y (0.98); the
 # biologically-left AL sits 107 um to the viewer's LEFT, which is right for
 # a mirrored space.
-anterior = "-z"
-dorsal = "-y"
+# The anatomy of this space, and the only thing that states it. It
+# sends +x to anterior, +y to dorsal and +z to LEFT, taking
+# JRC2018U's own axes as the anatomical ground truth.
+#
+# Left, not right: this space's array coordinates are a
+# reflection, so det[A, D, L] is the +1 one here.
+#
+# Measured by bridging 20,000 neuropil-mesh vertices into JRC2018U and
+# taking the rotation of the best-fit affine by polar decomposition.
+# Anterior ends up 17.5 deg from the declared axis. The three EM volumes
+# agree with each other far better than any agrees with the template,
+# so this is one shared tilt rather than three separate errors.
+anatomical_rotation = { axis = [-0.680550, -0.114222, 0.723744], degrees = 168.79 }
 primary_atlas = "benton2025"
 notes = """The FAFB-family hub. Reaches hemibrain in 2 warps with no external \
 binary, whereas the FlyWire route goes through CMTK -- so FAFB-family assets \
@@ -62,11 +73,22 @@ no asset lives in it, and navis still routes through it internally when \nthat i
 title = "Hemibrain (JRCFIB2018F)"
 units = "nm"
 flybrains_template = "JRCFIB2018F"
-anterior = "+y"
-dorsal = "-z"
 # Three atlases share this space, so which one opens is a choice: the
 # neuPrint parcellation is the reference the other two are compared
 # against. The Schlegel pair load with it and start switched off.
+# The anatomy of this space, and the only thing that states it. It
+# sends +x to anterior, +y to dorsal and +z to RIGHT, taking
+# JRC2018U's own axes as the anatomical ground truth.
+#
+# Right, not left, because napari's three arrows are
+# right-handed and this can only turn them: det[A, D, R] is +1.
+#
+# Measured by bridging 20,000 neuropil-mesh vertices into JRC2018U and
+# taking the rotation of the best-fit affine by polar decomposition.
+# Anterior ends up 16.1 deg from the declared axis. Half a brain, so the cloud is
+# one-sided, but the angle lands within 1.5 deg of the other two,
+# which a lopsided fit would not.
+anatomical_rotation = { axis = [-0.522331, -0.685514, 0.507190], degrees = 111.30 }
 primary_atlas = "neuprint_hemibrain"
 notes = """Half-brain. No explicit mirror registration: navis.mirror_brain \
 still succeeds but falls back to a bounding-box reflection, which is not a \
@@ -78,8 +100,19 @@ units = "nm"
 flybrains_template = "JRCFIB2022M"
 # Names give anterior -z (0.98) and dorsal -y (0.98); the left AL lands 121 um
 # to the viewer's right.
-anterior = "-z"
-dorsal = "-y"
+# The anatomy of this space, and the only thing that states it. It
+# sends +x to anterior, +y to dorsal and +z to RIGHT, taking
+# JRC2018U's own axes as the anatomical ground truth.
+#
+# Right, not left, because napari's three arrows are
+# right-handed and this can only turn them: det[A, D, R] is +1.
+#
+# Measured by bridging 20,000 neuropil-mesh vertices into JRC2018U and
+# taking the rotation of the best-fit affine by polar decomposition.
+# Anterior ends up 14.7 deg from the declared axis. BRAIN only: the male CNS neuropil
+# asset carries no VNC ROI, checked against malecns_vnc_rois.txt, and
+# JRC2018U is a brain template that VNC points would drag the fit to.
+anatomical_rotation = { axis = [-0.703787, -0.082954, 0.705551], degrees = 168.76 }
 primary_atlas = "neuprint_cns"
 notes = """Whole CNS: 753 x 627 x 1077 um, 8 nm voxels. Brain-only work must \
 exclude the VNC -- the ROI tree splits into CentralBrain, Optic(L), Optic(R), \
@@ -91,8 +124,42 @@ VNC and CV, so brain = CentralBrain + Optic(L) + Optic(R)."""
 # an AL-only stack, so the positional contrasts have a shorter baseline --
 # but the handedness check agrees: the left AL lands 126 um to the
 # viewer's right.
-anterior = "-y"
-dorsal = "-z"
+# The anatomy of this space, and the only thing that states it. It
+# sends +x to anterior, +y to dorsal and +z to RIGHT, taking
+# JRC2018U's own axes as the anatomical ground truth.
+#
+# GRABE has no bridging registration, so it is reached through the
+# glomeruli instead. Its compartments pair with the neuPrint hemibrain
+# and male CNS atlases by canonical name; FAFB is left out on purpose,
+# its only glomerulus atlas covering ONE lobe, and a fit with no
+# midline in it barely constrains left-right.
+#
+# One full affine per target over ALL glomeruli of BOTH hemispheres at
+# once -- 72 against the hemibrain (19 L + 53 R, its left side being
+# partial) and 106 against the male CNS (53 + 53). Affine rather than
+# rigid, so the 1.5x size difference has somewhere to go instead of
+# leaking into the rotation; only the rotation is kept, by polar
+# decomposition. Each target's frame is its own CORRECTED one.
+#
+#   vs hemibrain   31.74 deg   RMS 10.83 um   anisotropy 1.511
+#   vs male CNS    31.98 deg   RMS 10.05 um   anisotropy 1.523
+#   the two differ by 5.21 deg
+#
+# Consensus by the chordal L2 mean on SO(3): the principal eigenvector
+# of the summed quaternion outer products, which is sign-invariant and
+# so needs no double-cover bookkeeping. Anterior ends up 31.5 deg from
+# the declared axis, about twice the EM volumes' tilt.
+#
+# An earlier pass constrained this to a pure pitch about left-right,
+# giving 31.29 rather than 31.76 deg. Unconstrained now: the constraint
+# cost 5.52 deg where the two targets disagree by 5.21, so it was not
+# resolving anything the data settles.
+#
+# Not a short-baseline artefact: Benton is also AL-only, on the same
+# glomeruli, and its name-derived axes sit at 0.97-0.99 dominance
+# against GRABE's 0.72-0.79. Not anisotropy either: rescaling per axis
+# without rotating leaves 59.6 um RMS where a rotation leaves 8.5.
+anatomical_rotation = { axis = [-0.430254, 0.798427, -0.421184], degrees = 108.85 }
 primary_atlas = "grabe2015"
 title = "Grabe 2015 LM template"
 units = "um"

@@ -7,7 +7,7 @@ import contextlib
 import numpy as np
 
 from ..core.registry import Registry
-from .axes import label_viewer_axes
+from .axes import apply_axis_mode
 from .contours import ContourOverlay
 from .contours import install as install_contours
 from .layers import AtlasSurface, canonical_colors, match_label_colors
@@ -162,8 +162,11 @@ def build_scene(
     show_primary_atlas(registry, space, surfaces, contours)
 
     # Anatomical names for the dimension sliders and napari's own axis
-    # overlay. No layer of our own: see `viewer/axes.py`.
-    label_viewer_axes(viewer, registry.spaces[space])
+    # overlay. No layer of our own: see `viewer/axes.py`. It shows the
+    # anatomy in 3D and the voxel grid in 2D, and is kept up to date by
+    # `install_display_mode`, whose handlers a scene switch disconnects
+    # -- connecting here instead leaked one per switch.
+    apply_axis_mode(viewer, registry.spaces[space])
 
     return surfaces, contours
 
@@ -185,7 +188,9 @@ def build_scene(
 ROLE_DISPLAY = {
     "template_image": {"colormap": "gray"},
     "virtual_stain": {
-        "colormap": "magenta",
+        # Grey, not a hue. These are reference imagery under coloured
+        # glomeruli, and a magenta wash tinted every mesh drawn over it.
+        "colormap": "gray",
         "gamma": 0.7,
         "rendering": "attenuated_mip",
         "attenuation": 0.1,
@@ -252,19 +257,24 @@ GIMBAL_NUDGE_DEG = 1.0
 def orient_anterior(viewer, space, nudge_deg: float = GIMBAL_NUDGE_DEG) -> bool:
     """Face the anterior surface of the brain, dorsal up. True if applied.
 
-    Needs BOTH axes. A view direction alone leaves the roll free, so a camera
-    built from `anterior` without `dorsal` would face the right way at an
-    arbitrary tilt -- worse than an obvious default, because it looks
-    deliberate. Spaces declaring only one are left alone.
+    Uses the space's MEASURED anatomy, so the view really is down the
+    antero-posterior axis rather than down the nearest array axis to it
+    -- which differs by 15-18 degrees in the EM volumes and 31 in GRABE.
+
+    Needs the whole frame. A view direction alone leaves the roll free,
+    so a camera built from anterior without dorsal would face the right
+    way at an arbitrary tilt -- worse than an obvious default, because
+    it looks deliberate. A space with no rotation declared is left
+    alone.
     """
     import numpy as np
 
-    from ..core.model import axis_vector
+    from ..core.model import anatomical_axes
 
-    if viewer.dims.ndisplay != 3 or not (space.anterior and space.dorsal):
+    frame = anatomical_axes(space)
+    if viewer.dims.ndisplay != 3 or frame is None:
         return False
-    anterior = axis_vector(space.anterior)
-    dorsal = axis_vector(space.dorsal)
+    anterior, dorsal = frame["A"], frame["D"]
 
     # Yaw the camera slightly about the dorsal axis, off the singularity.
     view = -anterior
@@ -599,7 +609,7 @@ USE_SLICE_CONTOURS = True
 
 
 def install_display_mode(viewer, surfaces, contours, images=(),
-                         detach: bool | None = None) -> list[tuple]:
+                         detach: bool | None = None, space=None) -> list[tuple]:
     """Show only what the current `ndisplay` can actually use.
 
     Returns (event, handler) pairs, so a scene switch can disconnect them;
@@ -634,6 +644,11 @@ def install_display_mode(viewer, surfaces, contours, images=(),
     def _apply(event=None) -> None:
         three_d = viewer.dims.ndisplay == 3
         ndim = viewer.dims.ndim
+        # The triad shows the anatomy in 3D and the voxel grid in 2D,
+        # and this is already the hook that fires on a mode change and
+        # is torn down with the scene.
+        if space is not None:
+            apply_axis_mode(viewer, space)
         # Identity in 3D, or the stain transposes away from the meshes.
         want_order = (
             tuple(range(ndim)) if three_d or ndim != 3 else DIMS_ORDER_XYZ
@@ -861,7 +876,8 @@ def load_space(
         if layer.metadata.get("lobemap", {}).get("kind") in ("image", "labels")
     ]
     session.handlers = install_display_mode(
-        viewer, surfaces, contours, session.images
+        viewer, surfaces, contours, session.images,
+        space=registry.spaces[space],
     ) or []
     enforce_display_mode = session.handlers[0][1] if session.handlers else None
 

@@ -13,7 +13,7 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from lobemap.core.model import Space, axis_vector
+from lobemap.core.model import Space, anatomical_axes, axis_vector
 from lobemap.core.registry import Registry
 
 REGISTRY = Path(__file__).resolve().parents[1] / "registry"
@@ -34,59 +34,6 @@ def test_axis_vector_rejects_nonsense():
 
 
 #: Determined twice over, from positional nomenclature and from handedness.
-EXPECTED_AXES = {
-    "FAFB14": ("-z", "-y"),
-    "JRCFIB2018F": ("+y", "-z"),
-    "JRCFIB2022M": ("-z", "-y"),
-    "GRABE": ("-y", "-z"),
-}
-
-
-def test_declared_axes_match_what_was_measured():
-    reg = Registry.load(REGISTRY)
-    for space_id, (anterior, dorsal) in EXPECTED_AXES.items():
-        space = reg.spaces[space_id]
-        assert (space.anterior, space.dorsal) == (anterior, dorsal), space_id
-    assert reg.spaces["FAFB14"].primary_atlas == "benton2025"
-
-
-def test_axes_agree_with_positional_nomenclature():
-    """AL names encode position: D/V first letter, A/P second.
-
-    This is the independent check on the declared axes. It caught a dorsal
-    sign that was backwards in all four spaces.
-    """
-    from lobemap.core.names import parse_roi
-
-    reg = Registry.load(REGISTRY)
-    for atlas_id, space_id in (("benton2025", "FAFB14"),
-                               ("neuprint_hemibrain", "JRCFIB2018F"),
-                               ("neuprint_cns", "JRCFIB2022M"),
-                               ("grabe2015", "GRABE")):
-        ms = reg.mesh(reg.atlases[atlas_id].asset)
-        sides = {s for _, s in (parse_roi(n) for n in ms.names) if s}
-        side = "R" if "R" in sides else (min(sides) if sides else None)
-        cents = {}
-        for i, raw in enumerate(ms.names):
-            name, s = parse_roi(raw)
-            if side and s and s != side:
-                continue
-            a, b = int(ms.vertex_offsets[i]), int(ms.vertex_offsets[i + 1])
-            cents.setdefault(name, []).append(ms.vertices[a:b].mean(0))
-        cents = {k: np.mean(v, axis=0) for k, v in cents.items()}
-
-        def direction(pos, neg, cents=cents):
-            p = [v for k, v in cents.items() if pos(k)]
-            q = [v for k, v in cents.items() if neg(k)]
-            return np.mean(p, axis=0) - np.mean(q, axis=0)
-
-        space = reg.spaces[space_id]
-        dorsal = direction(lambda n: n[:1] == "D", lambda n: n[:1] == "V")
-        anterior = direction(lambda n: n[1:2] == "A", lambda n: n[1:2] == "P")
-        assert np.dot(dorsal, axis_vector(space.dorsal)) > 0, f"{space_id} dorsal"
-        assert np.dot(anterior, axis_vector(space.anterior)) > 0, f"{space_id} anterior"
-
-
 def test_left_al_lands_on_the_viewers_right_except_in_fafb():
     """The handedness convention, which fixes the sign of dorsal.
 
@@ -109,8 +56,8 @@ def test_left_al_lands_on_the_viewers_right_except_in_fafb():
             a, b = int(ms.vertex_offsets[i]), int(ms.vertex_offsets[i + 1])
             return ms.vertices[a:b].mean(0)
 
-        view = -axis_vector(space.anterior)
-        up = axis_vector(space.dorsal)
+        frame = anatomical_axes(space)
+        view, up = -frame["A"], frame["D"]
         screen_right = np.cross(view, up)
         offset = float(np.dot(centroid(left) - centroid(right_name), screen_right))
         assert (offset > 0) == (want > 0), (space_id, offset)
@@ -126,16 +73,8 @@ def test_the_antennal_lobes_lie_anterior_in_fafb():
     brain = reg.mesh("fafb_neuropil").vertices
     mid = (brain.min(0) + brain.max(0)) / 2
     al = reg.mesh("benton2025_glomeruli").vertices.mean(0)
-    anterior = axis_vector(reg.spaces["FAFB14"].anterior)
+    anterior = anatomical_axes(reg.spaces["FAFB14"])["A"]
     assert np.dot(al - mid, anterior) > 0, "ALs must be on the anterior side"
-
-
-def test_spaces_disagree_about_which_axis_is_anterior():
-    """The reason this is per-space data and not a constant."""
-    reg = Registry.load(REGISTRY)
-    assert reg.spaces["JRCFIB2018F"].anterior == "+y"
-    assert reg.spaces["JRCFIB2022M"].anterior == "-z"
-    assert reg.spaces["FAFB14"].anterior == "-z"
 
 
 def test_every_space_opens_with_exactly_one_atlas_and_its_image():
@@ -160,15 +99,6 @@ def test_every_space_opens_with_exactly_one_atlas_and_its_image():
         assert images == [image], (space_id, images)
 
 
-def test_every_space_with_an_atlas_declares_both_axes():
-    """One axis alone leaves the roll free, so the camera is skipped."""
-    reg = Registry.load(REGISTRY)
-    for space_id, space in reg.spaces.items():
-        if not reg.atlases_in_space(space_id):
-            continue
-        assert space.anterior and space.dorsal, space_id
-
-
 def test_spaces_with_an_atlas_all_declare_a_default():
     reg = Registry.load(REGISTRY)
     for space_id, space in reg.spaces.items():
@@ -190,14 +120,8 @@ def test_the_other_atlases_of_a_space_are_still_loaded():
     assert reg.primary_atlas("JRCFIB2018F").id == "neuprint_hemibrain"
 
 
-def test_registry_rejects_a_bad_axis_or_primary_atlas():
+def test_registry_rejects_an_unknown_primary_atlas():
     from lobemap.core.registry import RegistryError
-
-    reg = Registry.load(REGISTRY, validate=False)
-    reg.spaces["FAFB14"] = Space(id="FAFB14", title="x", units="um",
-                                 anterior="sideways")
-    with pytest.raises(RegistryError, match="signed axis"):
-        reg.validate()
 
     reg = Registry.load(REGISTRY, validate=False)
     reg.spaces["FAFB14"] = Space(id="FAFB14", title="x", units="um",
@@ -230,10 +154,12 @@ def viewer():
     v.close()
 
 
-def test_orient_anterior_points_the_camera_down_the_declared_axis(viewer):
+def test_orient_anterior_points_the_camera_down_the_measured_axis(viewer):
     from lobemap.viewer.app import GIMBAL_NUDGE_DEG, orient_anterior
 
-    space = Space(id="S", title="s", units="um", anterior="-z", dorsal="+y")
+    space = Space(id="S", title="s", units="um",
+                  anatomical_rotation_axis=(0.0, 1.0, 0.0),
+                  anatomical_rotation_deg=90.0)
     assert orient_anterior(viewer, space) is True
     cam = getattr(viewer, "scene", viewer).camera
     # Camera sits anterior and looks posteriorly, i.e. along +z, less the
@@ -293,25 +219,28 @@ def test_the_nudge_survives_the_round_trip_for_every_space():
     reg = Registry.load(REGISTRY)
     viewer = napari.Viewer(ndisplay=3, show=False)
     try:
-        for space_id, (_anterior, dorsal) in EXPECTED_AXES.items():
-            assert orient_anterior(viewer, reg.spaces[space_id]) is True
+        for space_id, space in reg.spaces.items():
+            dorsal = anatomical_axes(space)["D"]
+            assert orient_anterior(viewer, space) is True
             cam = getattr(viewer, "scene", viewer).camera
             angles = backward(forward(np.array(cam.angles), (False,) * 3),
                               (False,) * 3)
             after = Camera()
             after.angles = tuple(angles)
             assert np.dot(np.asarray(after.up_direction),
-                          axis_vector(dorsal)) > 0.99, space_id
+                          dorsal) > 0.99, space_id
     finally:
         viewer.close()
 
 
-def test_a_space_missing_dorsal_is_left_alone(viewer):
-    """Facing the right way at an arbitrary roll is worse than not trying."""
+def test_a_space_without_a_rotation_is_left_alone(viewer):
+    """A rotation is the only statement of anatomy, and half a frame --
+    a view direction with no up -- would face the right way at an
+    arbitrary roll, which is worse than not trying."""
     from lobemap.viewer.app import orient_anterior
 
     before = tuple(getattr(viewer, "scene", viewer).camera.view_direction)
-    space = Space(id="S", title="s", units="um", anterior="-z")
+    space = Space(id="S", title="s", units="um")
     assert orient_anterior(viewer, space) is False
     after = tuple(getattr(viewer, "scene", viewer).camera.view_direction)
     assert before == after
@@ -321,7 +250,9 @@ def test_orientation_is_skipped_in_2d(viewer):
     from lobemap.viewer.app import orient_anterior
 
     viewer.dims.ndisplay = 2
-    space = Space(id="S", title="s", units="um", anterior="-z", dorsal="+y")
+    space = Space(id="S", title="s", units="um",
+                  anatomical_rotation_axis=(0.0, 1.0, 0.0),
+                  anatomical_rotation_deg=90.0)
     assert orient_anterior(viewer, space) is False
 
 
@@ -330,7 +261,9 @@ def test_fit_view_keeps_the_orientation(viewer):
     from lobemap.viewer.app import fit_view, orient_anterior
 
     viewer.add_image(np.zeros((40, 30, 20), np.uint8))
-    space = Space(id="S", title="s", units="um", anterior="-z", dorsal="+y")
+    space = Space(id="S", title="s", units="um",
+                  anatomical_rotation_axis=(0.0, 1.0, 0.0),
+                  anatomical_rotation_deg=90.0)
     orient_anterior(viewer, space)
     fit_view(viewer)
     cam = getattr(viewer, "scene", viewer).camera
@@ -420,8 +353,8 @@ def test_home_looks_down_a_p_with_dorsal_up(space_id):
     try:
         load_space(viewer, reg, space_id, fit=True)
         space = reg.spaces[space_id]
-        anterior = axis_vector(space.anterior)
-        dorsal = axis_vector(space.dorsal)
+        frame = anatomical_axes(space)
+        anterior, dorsal = frame["A"], frame["D"]
 
         viewer.camera.angles = (17, 42, -63)        # the user rotates
         _home(viewer)
@@ -458,7 +391,7 @@ def test_home_survives_a_scene_switch():
 
         viewer.camera.angles = (5, 5, 5)
         _home(viewer)
-        anterior = axis_vector(reg.spaces["JRCFIB2018F"].anterior)
+        anterior = anatomical_axes(reg.spaces["JRCFIB2018F"])["A"]
         view = np.asarray(viewer.camera.view_direction)
         assert float(np.dot(view, anterior)) < -0.99, (
             "home re-oriented to the previous space"

@@ -24,9 +24,9 @@ from .model import (
     Derivation,
     Provenance,
     Space,
-    axis_vector,
+    rotation_axis_vector,
 )
-from .names import Nomenclature, parse_roi
+from .names import Nomenclature, display_name, parse_roi
 
 
 def default_data_root(root: Path) -> Path:
@@ -58,6 +58,18 @@ def default_data_root(root: Path) -> Path:
 #: No single atlas defines the vocabulary any more; see `Registry.vocabulary`.
 #: Retained as documentation of where FAFB's names come from.
 FAFB_NOMENCLATURE_SOURCE = "benton2025"
+
+
+def _rot(body):
+    """The `anatomical_rotation` table, with a vector axis made hashable."""
+    table = body.get("anatomical_rotation") or {}
+    axis = table.get("axis")
+    if axis is not None and not isinstance(axis, str):
+        try:
+            axis = tuple(float(v) for v in axis)
+        except (TypeError, ValueError):
+            pass                 # let `validate` report it
+    return {"axis": axis, "degrees": table.get("degrees")}
 
 
 class RegistryError(ValueError):
@@ -117,8 +129,8 @@ class Registry:
                 units=body.get("units", "um"),
                 flybrains_template=tmpl,
                 lateral_convention=body.get("lateral_convention", "biological"),
-                anterior=body.get("anterior"),
-                dorsal=body.get("dorsal"),
+                anatomical_rotation_axis=_rot(body).get("axis"),
+                anatomical_rotation_deg=_rot(body).get("degrees"),
                 primary_atlas=body.get("primary_atlas"),
                 notes=body.get("notes", ""),
             )
@@ -195,11 +207,13 @@ class Registry:
         for i, name in enumerate(ms.names):
             _glom, side = parse_roi(name)
             side = side or default_side
+            # Resolved on the RAW name: the nomenclature table is keyed
+            # by what the source published, prefix and all.
             corr = self.names.resolve(atlas.id, name)
             out.append(
                 Compartment(
                     local_id=i,
-                    published_name=name,
+                    published_name=display_name(name),
                     side=side,
                     canonical=corr.canonical if corr else (),
                     relation=corr.relation if corr else "absent",
@@ -335,16 +349,31 @@ class Registry:
                 )
 
         for s in self.spaces.values():
-            for field in ("anterior", "dorsal"):
-                spec = getattr(s, field)
-                if spec is None:
-                    continue
-                try:
-                    axis_vector(spec)
-                except ValueError:
+            axis = s.anatomical_rotation_axis
+            degrees = s.anatomical_rotation_deg
+            if (axis is None) != (degrees is None):
+                problems.append(
+                    f"space {s.id!r}: anatomical_rotation needs both axis "
+                    f"and degrees -- an axis with no angle names no rotation"
+                )
+            elif axis is not None:
+                if rotation_axis_vector(s) is None:
                     problems.append(
-                        f"space {s.id!r}: {field}={spec!r} is not a signed axis"
+                        f"space {s.id!r}: anatomical_rotation axis {axis!r} "
+                        f"is not a signed array axis or a non-zero vector"
                     )
+                try:
+                    float(degrees)
+                except (TypeError, ValueError):
+                    problems.append(
+                        f"space {s.id!r}: anatomical_rotation degrees "
+                        f"{degrees!r} is not a number"
+                    )
+            elif self.atlases_in_space(s.id):
+                warnings.append(
+                    f"space {s.id!r} declares no anatomical_rotation, so the "
+                    f"viewer cannot orient it or name its axes"
+                )
             here = [a.id for a in self.atlases_in_space(s.id)]
             if s.primary_atlas and s.primary_atlas not in here:
                 problems.append(

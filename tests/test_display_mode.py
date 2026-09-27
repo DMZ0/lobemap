@@ -14,7 +14,6 @@ from lobemap.core.imagefmt import Volume, as_lazy
 from lobemap.viewer.app import (
     VIEW3D_MAX_AXIS,
     VIEW3D_MAX_VOXELS,
-    default_colormap,
     level_for_3d,
 )
 
@@ -87,5 +86,3 @@ def test_as_lazy_passes_numpy_through_unchanged():
     assert as_lazy(arr) is arr
 
 
-def test_stain_colormap_is_still_magenta():
-    assert default_colormap("virtual_stain") == "magenta"

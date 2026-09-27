@@ -10,24 +10,43 @@ Companion to [design.md](design.md) (architecture) and
 ## 1. Laterality: FAFB image space is mirrored
 
 **FAFB and FlyWire image data is left-right inverted, and the bridging
-registrations do not correct it.** Three independent measurements:
+registrations do not correct it.**
+
+**Benton 2025 is the fly's LEFT antennal lobe**, and the shortest proof of
+it needs no bridging at all. Benton's meshes and the FlyWire neuropil shells
+are both in FAFB14, so they can be compared directly:
+
+| | |
+| --- | --- |
+| Benton centroids inside `AL_L` | **58 / 58** |
+| Benton centroids inside `AL_R` | 0 / 58 |
+| Benton x-range | 416.3 – 522.2 µm |
+| `AL_L` x-range | 411.0 – 523.4 µm |
+| `AL_R` x-range | 529.6 – 634.9 µm |
+| midline, from 35 `_L`/`_R` neuropil pairs | 525.9 µm |
+
+Not merely nearer `AL_L` — the two do not overlap. Sampling every 37th
+vertex, 3823 fall inside `AL_L` and none inside `AL_R`. FlyWire's `AL_L` is
+the modern post-correction annotation, so biologically left, and that
+settles it.
+
+Three further measurements agree and establish the mirroring itself:
 
 1. **Hemibrain's own labels are biologically correct.** The asymmetric body is
    known to be larger on the fly's right; in hemibrain `AB(R)` is 1431 µm³
-   against `AB(L)`'s 390 µm³ — 3.7×.
-2. **FlyWire's `AL_L`** — the modern post-correction annotation, so
-   biologically left — **bridges onto hemibrain `AL(R)`** at 4.6 µm versus
+   against `AB(L)`'s 390 µm³ — 3.7×. The male CNS gives 4.25×.
+2. **FlyWire's `AL_L` bridges onto hemibrain `AL(R)`** at 4.6 µm versus
    94.3 µm to `AL(L)`; `AL_R` lands on `AL(L)`.
-3. **All 58 Bates centroids fall inside the fafbseg `AL_L` shell**, none
-   inside `AL_R`.
+3. **In JRC2018U, FAFB's biological-right pole sits 175.8° from the
+   hemibrain's** — antiparallel — while the hemibrain and male CNS agree at
+   2.2°. This falls out of the rotation work in §9, by a route that has
+   nothing to do with glomeruli.
 
-So a bridge preserves **apparent** side, not biological side.
-
-**Consequence: Bates 2020 is the fly's LEFT antennal lobe.** The paper
-describes it as the right AL, but predates the discovery that FAFB is
-inverted; the authors have confirmed this. Benton inherits it. Schlegel
-S11/S12 are unaffected — they ship in hemibrain coordinates, which are not
-inverted.
+So a bridge preserves **apparent** side, not biological side. Benton
+inherits the inversion from the Bates masks it revises; the Bates paper
+describes them as the right AL, which predates the discovery that FAFB is
+inverted. Schlegel S11/S12 are unaffected — they ship in hemibrain
+coordinates, which are not inverted.
 
 Modelled as `Space.lateral_convention` ∈ {biological, mirrored};
 `Asset.side` records the **biological** side; `Space.apparent_side()`
@@ -718,3 +737,79 @@ synapses whose ROI is unspecified but whose position is in the brain. It drops
   also append progress to `registry/data/<asset>.progress.log`.
 - Machine: 32 GB RAM, i5-12600K (10c/16t), 3.3 TB free on `D:`. Nothing in
   this project needs the HPC cluster.
+
+---
+
+## 9. Anatomical axes: every space is tilted
+
+**Taking JRC2018U's own axes as the anatomy, no space in the catalogue is
+axis-aligned.** Measured by bridging 20,000 neuropil-mesh vertices per space
+into JRC2018U and taking the rotation of the best-fit affine by polar
+decomposition.
+
+| space | anterior, off the nearest array axis |
+| --- | --- |
+| FAFB14 | 17.5° |
+| JRCFIB2018F | 16.1° |
+| JRCFIB2022M | 14.7° (brain only — the male CNS asset carries no VNC ROI) |
+| GRABE | 31.5° |
+
+The three EM volumes agree with each other far better than any agrees with
+the template — 1.5–4.2° pairwise on anterior and dorsal — so this is **one
+shared tilt**, not three separate errors. FAFB14 → JRCFIB2018F measured
+directly is 4.37°, FAFB14 → JRCFIB2022M 4.09°.
+
+Which way the ground truth points is a discrete choice, and it is not in
+doubt: all three EM spaces independently put JRC2018U's anterior nearest
+`-z` and dorsal nearest `-y`. `R = cross(A, D) = -x` then follows, and is
+confirmed by the hemibrain and male CNS mapping their biological right onto
+`-x` while mirrored FAFB maps onto `+x`.
+
+**Voxel anisotropy does not enter.** Everything goes through `resolve_points`,
+which works in physical units on both sides; the template bounding boxes are
+physical, not voxel indices. The clincher is the fitted affine itself —
+FAFB→JRC2018U has singular values [0.650, 0.812, 0.866], anisotropy 1.33. A
+4/4/40 nm unit error would show as a **10×** gap in one singular value.
+JRC2018U is isotropic anyway, at 0.38 µm cubic.
+
+### GRABE, which has no bridge
+
+Reached through its glomeruli instead. One full affine against each of the
+neuPrint hemibrain and male CNS atlases, over **all glomeruli of both
+hemispheres** — 72 and 106 pairs — against each target's corrected frame.
+Affine rather than rigid so the 1.5× size difference has somewhere to go
+instead of leaking into the rotation; only the rotation is kept.
+
+| | rotation | RMS | anisotropy |
+| --- | --- | --- | --- |
+| vs hemibrain | 31.74° | 10.83 µm | 1.511 |
+| vs male CNS | 31.98° | 10.05 µm | 1.523 |
+
+5.21° apart. Consensus by the chordal L2 mean on SO(3) — the principal
+eigenvector of the summed quaternion outer products, sign-invariant and so
+needing no double-cover bookkeeping.
+
+FAFB is excluded: its only glomerulus atlas covers one lobe, and a fit with
+no midline in it barely constrains left-right.
+
+Three things it is **not**. Not a short-baseline artefact: Benton is also
+AL-only, on the same glomeruli, and its name-derived axes sit at 0.97–0.99
+dominance against GRABE's 0.72–0.79. Not anisotropy: rescaling per axis
+without rotating leaves 59.6 µm RMS where a rotation leaves 8.5. Not an
+artefact of the targets' own tilt — though measuring against their
+*declared* axes did inflate it to 48.72°, carrying their 15–18° into it.
+
+### What this cost, and what it did not
+
+`Space.anterior` and `Space.dorsal` are gone. They named a signed array axis
+each, which was the anatomy before it was measured and afterwards only ever
+the nearest array axis to it. Slicing never read them — that uses a fixed
+`DIMS_ORDER_XYZ` — so only the camera did.
+
+Nothing about any dataset moves. The rotation is a property of the space,
+used to orient the camera and to draw the second axis triad; no image, mesh,
+world coordinate or slice plane is touched. Resampling GRABE to be
+axis-aligned was considered and rejected: its stack is 0.34 × 0.34 × 0.96 µm
+and the tilt is a pitch about x, so it mixes the fine axis into the coarse
+one — the worst case.
+

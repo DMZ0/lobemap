@@ -147,18 +147,17 @@ def test_lateral_points_at_declared_right_where_sides_are_biological(
     assert float(np.dot(direction, frame["R"])) > 0.9
 
 
-def test_a_space_without_axes_gets_no_frame():
+def test_a_space_without_a_rotation_gets_no_frame():
     """Built here rather than taken from the registry.
 
     This used to borrow JRC2018U, which declared no axes because nothing
     was ever shown in it. That space has been removed, and the behaviour
-    under test is about a Space with no axes rather than about any
-    particular one.
+    under test is about a Space with no rotation rather than about
+    any particular one.
     """
     from lobemap.core.model import Space
 
     space = Space(id="NOAXES", title="no axes", units="um")
-    assert not (space.anterior and space.dorsal)
     assert anatomical_axes(space) is None
     assert axis_labels_for(space) is None
 
@@ -185,36 +184,97 @@ def test_axis_labels_name_every_array_axis(registry):
 
 
 def test_each_label_names_the_pole_its_own_arrow_reaches(registry):
-    """The label must describe the arrow it sits on.
+    """The contract the whole triad rests on.
 
     napari draws each arrow along INCREASING index and offers no way to
-    reverse one, so a label naming the opposite pole would contradict the
-    arrow beneath it -- which is what got the old Vectors layer removed.
+    reverse one, so a label naming a pole its arrow does not reach would
+    contradict the arrow beneath it -- which is what got an older
+    world-space Vectors layer removed.
     """
+    import numpy as np
+
+    from lobemap.core.model import anatomical_axes, anatomical_triad
+
     for space_id in ("FAFB14", "JRCFIB2018F", "JRCFIB2022M", "GRABE"):
         space = registry.spaces[space_id]
+        matrix, labels = anatomical_triad(space)
         frame = anatomical_axes(space)
-        for axis, pole in enumerate(axis_labels_for(space)):
-            assert frame[pole][axis] > 0, (
-                f"{space_id} axis {axis} is labelled {pole!r}, but {pole} "
-                f"lies down that axis, not up it -- the arrow points the "
-                f"other way"
+        for arrow, pole in enumerate(labels):
+            assert np.allclose(matrix[:, arrow], frame[pole], atol=1e-12), (
+                space_id, arrow, pole
             )
 
 
-def test_the_labels_differ_between_spaces(registry):
-    """Not a cosmetic detail: the arrows genuinely reach different poles.
+def test_no_anatomical_arrow_lands_near_a_world_arrow(registry):
+    """The point of the choice: the two triads share an origin, so an
+    anatomical arrow close to one of napari's collides with it.
 
-    FAFB's third axis runs posterior where the hemibrain's second runs
-    anterior, so a fixed `A, D, L` would be wrong in some space.
+    The world arrows are the POSITIVE axes only -- napari draws each
+    along increasing index and cannot reverse one -- which is why the
+    sign of each pole is worth choosing. Against plus-and-minus axes
+    the nearest distance would be fixed by the anatomy and no labelling
+    could improve it.
     """
-    labels = {
-        s: axis_labels_for(registry.spaces[s])
-        for s in ("FAFB14", "JRCFIB2018F", "JRCFIB2022M", "GRABE")
-    }
-    assert labels["FAFB14"] == ("R", "V", "P"), labels["FAFB14"]
-    assert labels["JRCFIB2018F"] == ("L", "A", "V"), labels["JRCFIB2018F"]
-    assert len(set(labels.values())) > 1
+    import numpy as np
+
+    from lobemap.core.model import anatomical_triad
+
+    for space_id in ("FAFB14", "JRCFIB2018F", "JRCFIB2022M", "GRABE"):
+        matrix, _labels = anatomical_triad(registry.spaces[space_id])
+        # the nearest positive axis to a column is its largest component
+        nearest = [np.degrees(np.arccos(np.clip(np.max(matrix[:, k]), -1, 1)))
+                   for k in range(3)]
+        assert min(nearest) > 45.0, (space_id, np.round(nearest, 1))
+
+
+def test_the_triad_maximises_that_separation(registry):
+    """Checked against brute force over all 48 signed permutations: the
+    chosen one must be a right-handed candidate whose closest approach
+    to a world arrow is as far off as any candidate achieves."""
+    import itertools
+
+    import numpy as np
+
+    from lobemap.core.model import anatomical_axes, anatomical_triad
+
+    for space_id in ("FAFB14", "JRCFIB2018F", "JRCFIB2022M", "GRABE"):
+        matrix, _labels = anatomical_triad(registry.spaces[space_id])
+        assert np.isclose(np.linalg.det(matrix), 1.0, atol=1e-12), space_id
+        frame = anatomical_axes(registry.spaces[space_id])
+        vectors = [frame["A"], frame["D"], frame["R"]]
+
+        def closest(M):
+            return max(float(np.max(M[:, k])) for k in range(3))
+
+        best = min(
+            closest(M) for M in (
+                np.column_stack([signs[k] * vectors[order[k]] for k in range(3)])
+                for order in itertools.permutations(range(3))
+                for signs in itertools.product((1, -1), repeat=3))
+            if np.linalg.det(M) > 0
+        )
+        assert np.isclose(closest(matrix), best, atol=1e-12), space_id
+
+
+def test_the_anatomical_labels_differ_between_spaces(registry):
+    """They name the second triad's arrows, and which pole each arrow
+    carries is chosen per space to sit nearest its own world axis. So
+    they move with the space, and with the angle.
+
+    They were briefly fixed at (A, D, R/L), when ONE triad carried both
+    the anatomy and the grid; there, a label that moved with the angle
+    was a bug. With two triads the choice is what keeps them apart.
+    """
+    labels = {s: axis_labels_for(registry.spaces[s])
+              for s in ("FAFB14", "JRCFIB2018F", "JRCFIB2022M", "GRABE")}
+    assert labels["FAFB14"] == ("A", "D", "L"), labels["FAFB14"]
+    assert labels["JRCFIB2018F"] == ("P", "R", "D"), labels["JRCFIB2018F"]
+    assert len(set(labels.values())) > 1, labels
+    # each names one pole of each anatomical axis, never two of one
+    for space_id, trio in labels.items():
+        axes = {"A": "AP", "P": "AP", "D": "DV", "V": "DV",
+                "R": "LR", "L": "LR"}
+        assert {axes[p] for p in trio} == {"AP", "DV", "LR"}, (space_id, trio)
 
 
 def test_no_axes_layer_is_created(registry):
@@ -244,16 +304,25 @@ def test_no_axes_layer_is_created(registry):
 
 @pytest.mark.parametrize("space_id",
                          ["FAFB14", "JRCFIB2018F", "JRCFIB2022M", "GRABE"])
-def test_the_overlay_is_turned_on_and_named(registry, space_id):
-    napari = pytest.importorskip("napari")
-    from lobemap.viewer.app import build_scene
+def test_napari_own_triad_always_names_the_array_axes(registry, space_id):
+    """It is left exactly as it comes, in both display modes.
 
-    viewer = napari.Viewer(show=False)
+    The anatomy is a second triad beside it. Turning napari's own onto
+    the anatomy, as an earlier version did, left nothing showing where
+    the voxel grid ran -- and the sliders, which step array axes, ended
+    up with anatomical names.
+    """
+    napari = pytest.importorskip("napari")
+
+    from lobemap.viewer.app import load_space
+    from lobemap.viewer.axes import VOXEL_LABELS
+
+    viewer = napari.Viewer(show=False, ndisplay=3)
     try:
-        build_scene(viewer, registry, space_id)
-        assert tuple(viewer.dims.axis_labels) == axis_labels_for(
-            registry.spaces[space_id]
-        )
+        load_space(viewer, registry, space_id)
+        for mode in (3, 2, 3):
+            viewer.dims.ndisplay = mode
+            assert tuple(viewer.dims.axis_labels) == VOXEL_LABELS, mode
         overlay = viewer.canvas.overlays["axes"]
         assert overlay.visible is True
         assert overlay.labels is True
@@ -316,5 +385,125 @@ def test_labels_are_refused_rather_than_truncated(registry):
         before = tuple(viewer.dims.axis_labels)
         assert label_viewer_axes(viewer, registry.spaces["FAFB14"]) is False
         assert tuple(viewer.dims.axis_labels) == before
+    finally:
+        viewer.close()
+
+
+# -- GRABE: anatomy that is not axis-aligned -------------------------------
+#
+# Measured against Benton, the hemibrain and the male CNS, both lobes of
+# each, GRABE's anterior and dorsal sit ~49 deg off its array axes. The
+# overlay draws one arrow per ARRAY axis, so labelling them cannot say
+# that: the label would name a pole its own arrow never reaches. napari's
+# own visual is rotated instead, which keeps the indicator identical to
+# the one the other three spaces show and moves only where it points.
+
+
+# -- the declared rotation -------------------------------------------------
+#
+# It sends the array axes onto (A, D, lateral) and is the only statement
+# of a space's anatomy. What is worth pinning is the contract -- any
+# axis and angle give a proper frame, the labels never move -- and not
+# the four angles that happen to be declared today.
+
+
+@pytest.mark.parametrize("axis", ["+x", "-z", (0.3, -0.5, 0.81), (1.0, 1.0, 1.0)])
+@pytest.mark.parametrize("degrees", [0.0, 37.0, -120.0, 180.0])
+def test_any_axis_and_angle_give_a_proper_rotation(registry, axis, degrees):
+    """Why the schema is axis-angle and not a matrix or a vector pair."""
+    import dataclasses
+
+    import numpy as np
+
+    from lobemap.core.model import anatomical_rotation_matrix
+
+    space = dataclasses.replace(registry.spaces["GRABE"],
+                                anatomical_rotation_axis=axis,
+                                anatomical_rotation_deg=degrees)
+    frame = anatomical_axes(space)
+    M = anatomical_rotation_matrix(space)
+    assert np.allclose(M.T @ M, np.eye(3), atol=1e-12)
+    assert np.isclose(np.linalg.det(M), 1.0, atol=1e-12)
+    for pole, opposite in (("A", "P"), ("D", "V"), ("R", "L")):
+        assert np.allclose(frame[pole], -frame[opposite], atol=1e-12)
+
+
+def test_a_pole_name_is_not_an_axis(registry):
+    """It would be circular: the poles are what the rotation defines.
+    The earlier RELATIVE schema did take one, and GRABE used R."""
+    import dataclasses
+
+    from lobemap.core.model import rotation_axis_vector
+
+    space = dataclasses.replace(registry.spaces["GRABE"],
+                                anatomical_rotation_axis="R")
+    with pytest.raises(ValueError):
+        rotation_axis_vector(space)
+
+
+def test_an_axis_without_an_angle_is_rejected(registry):
+    """Half a declaration names no rotation, and ignoring it would leave
+    the arrows on the array axes while the registry claimed otherwise."""
+    import dataclasses
+
+    from lobemap.core.registry import RegistryError
+
+    reg = Registry.load("registry")
+    reg.spaces["GRABE"] = dataclasses.replace(
+        reg.spaces["GRABE"], anatomical_rotation_deg=None
+    )
+    with pytest.raises(RegistryError, match="anatomical_rotation"):
+        reg.validate()
+
+
+def test_the_anatomy_gets_a_second_triad_shown_only_in_3d(registry):
+    """Two triads sharing one origin in 3D; napari's alone in 2D.
+
+    A slice is cut along ARRAY axes, which are 15-31 degrees off the
+    anatomy in every space here, so an anatomical arrow drawn over a
+    slice would claim an alignment the slice does not have.
+
+    It is a vispy visual inside napari's own overlay, not a layer, so it
+    shares the origin, the camera and the corner anchoring -- and does
+    not appear in the layer list. See `test_no_axes_layer_is_created`.
+    """
+    napari = pytest.importorskip("napari")
+    import numpy as np
+
+    from lobemap.core.model import anatomical_axes
+    from lobemap.viewer.app import load_space
+    from lobemap.viewer.axes import (
+        _ANATOMY_ATTR,
+        _vispy_axes_overlay,
+        axis_labels_for,
+    )
+
+    viewer = napari.Viewer(show=False, ndisplay=3)
+    try:
+        load_space(viewer, registry, "GRABE")
+        overlay = _vispy_axes_overlay(viewer)
+        if overlay is None:
+            pytest.skip("no vispy canvas")
+        node = getattr(overlay, _ANATOMY_ATTR, None)
+        assert node is not None, "no anatomical triad was created"
+        assert node.visible is True
+        assert node.parent is overlay.node.scene, "not in napari's own view box"
+
+        # napari's own is untouched: not turned, not recoloured
+        assert getattr(overlay.node.axes.transform, "matrix", None) is None
+
+        # the second one carries the anatomy
+        labels = axis_labels_for(registry.spaces["GRABE"])
+        assert list(node.text.text) == list(labels)[::-1]
+        frame = anatomical_axes(registry.spaces["GRABE"])
+        flip = np.eye(3)[::-1]
+        recovered = flip @ np.asarray(node.transform.matrix)[:3, :3].T @ flip
+        for i, pole in enumerate(labels):
+            assert np.allclose(recovered[:, i], frame[pole], atol=1e-9), pole
+
+        viewer.dims.ndisplay = 2
+        assert node.visible is False
+        viewer.dims.ndisplay = 3
+        assert node.visible is True
     finally:
         viewer.close()
