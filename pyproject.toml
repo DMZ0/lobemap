@@ -3,8 +3,37 @@ name = "lobemap"
 version = "0.2.0.dev0"
 description = "napari viewer for Drosophila antennal lobe glomerular atlases across coordinate spaces"
 readme = "README.md"
+# MIT, and the copyright in LICENSE is Gustavo Madeira Santana's. Both
+# lines came from the original pyproject and were lost in the rewrite,
+# which shipped a package declaring no license at all.
+license = "MIT"
+license-files = ["LICENSE"]
 requires-python = ">=3.11,<3.13"
-authors = [{ name = "David Zimmerman" }]
+# Gustavo Madeira Santana originated lobemap and holds the copyright in
+# LICENSE. The viewer here is a rewrite, but the project, its name, the
+# curated nomenclature tables and the source data under registry/sources/
+# are his work, so he stays on the package metadata -- see README Lineage.
+authors = [
+  { name = "David Zimmerman" },
+  { name = "Gustavo Madeira Santana" },
+]
+keywords = ["drosophila", "napari", "neuroanatomy", "visualization"]
+# The original's list, plus the two the rewrite earns: it reads and
+# writes image formats, and it is a napari plugin-adjacent viewer. No
+# license classifier -- PEP 639 forbids one alongside `license`, and
+# setuptools refuses the build outright.
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Intended Audience :: Science/Research",
+  "Operating System :: OS Independent",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Topic :: Scientific/Engineering :: Bio-Informatics",
+  "Topic :: Scientific/Engineering :: Image Processing",
+  "Topic :: Scientific/Engineering :: Visualization",
+  "Framework :: napari",
+]
 
 # Runtime only. Per docs/design.md §8, the data-access stack (navis, flybrains,
 # fafbseg, neuprint-python) is deliberately NOT here: the viewer must open a
