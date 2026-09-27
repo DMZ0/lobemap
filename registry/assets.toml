@@ -55,11 +55,13 @@ path = "data/benton2025_glomeruli.npz"
 doi = "10.1038/s44319-025-00476-8"
 url = "https://doi.org/10.1038/s44319-025-00476-8"
 
+# Both lobes: 108 meshes, 54 per side, each name carrying its own (L)/(R)
+# suffix, so the asset-level default is never consulted for this one.
 [grabe2015_glomeruli]
 role = "glomeruli"
 space = "GRABE"
 kind = "meshset"
-side = "L"
+side = "both"
 path = "data/grabe2015_glomeruli.npz"
 [grabe2015_glomeruli.source]
 doi = "10.1016/j.cub.2015.07.036"

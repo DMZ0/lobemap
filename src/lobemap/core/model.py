@@ -72,13 +72,11 @@ def anatomical_axes(space):
 
     **A mirrored space negates it**, and getting this wrong is silent. FAFB's
     image data is left-right inverted, so apparent and biological sides come
-    apart there, and the two kinds of label in that space disagree about
-    which they use:
-
-    - FlyWire's neuropil annotations are the modern, post-correction ones and
-      are BIOLOGICAL: `AL_L` really is the left lobe.
-    - Bates's and Benton's glomerulus sides are APPARENT, which is why they
-      declare side R while sitting inside `AL_L`.
+    apart there. Every side label in the catalogue is BIOLOGICAL even so:
+    FlyWire's neuropil annotations are the modern, post-correction ones, so
+    `AL_L` really is the left lobe, and Benton declares side L because all
+    58 of its glomerulus centroids sit inside that `AL_L` shell and none
+    inside `AL_R`.
 
     `cross(anterior, dorsal)` runs from `AL_R` toward `AL_L` in FAFB, so
     unnegated it would point at the biological LEFT -- the arrow would be

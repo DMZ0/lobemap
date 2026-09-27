@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### Fixed
+
+- The table's `side` column now reports the BIOLOGICAL side, matching every other side label in the catalogue. It was converting the asset's declared side to the apparent one, so Benton's glomeruli read `R` in FAFB14 while sitting inside the shell FlyWire names `AL_L` and while their own asset declared `L` — two conventions in one space. All 58 Benton centroids are contained by `AL_L` and none by `AL_R`, so the atlas is the fly's LEFT antennal lobe and now says so.
+- `grabe2015_glomeruli` declared `side = "L"` but carries both lobes — 108 meshes, 54 per side, each name already suffixed `(L)` or `(R)`. It declares `both`, so nothing infers a side for an atlas that states one per compartment.
+
 ### Changed
 
 - Replaced the viewer with a ground-up rewrite, developed separately and

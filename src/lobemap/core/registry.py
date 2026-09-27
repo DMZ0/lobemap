@@ -182,11 +182,15 @@ class Registry:
         if asset is None or asset.kind != "meshset" or not asset.path.exists():
             return ()
         ms = self.mesh(atlas.asset)
-        # Laterality may be declared on the asset rather than in each name.
-        # Asset.side is the BIOLOGICAL side; geometry sits on the apparent one.
-        space = self.spaces.get(atlas.native_space)
-        bio = asset.side if asset.side in ("L", "R") else None
-        default_side = space.apparent_side(bio) if space else bio
+        # Laterality may be declared on the asset rather than in each name,
+        # and BOTH sources are biological. A side suffix is biological
+        # wherever it comes from -- FlyWire's neuropil annotations are the
+        # post-correction ones, so `AL_L` really is the left lobe -- and
+        # `Asset.side` is documented as biological too. Converting the asset
+        # default to apparent, as an earlier version did, made FAFB mix the
+        # two conventions in one space: Benton's glomeruli reported side R
+        # while sitting inside the shell named `AL_L`.
+        default_side = asset.side if asset.side in ("L", "R") else None
         out: list[Compartment] = []
         for i, name in enumerate(ms.names):
             _glom, side = parse_roi(name)
