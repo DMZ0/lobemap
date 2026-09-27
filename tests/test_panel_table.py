@@ -500,3 +500,84 @@ def test_3d_still_shows_the_mesh(session):
     assert tab.surface.layer.visible is True
     if tab.contour is not None:
         assert tab.contour.layer.visible is False
+
+
+# -- which tab opens -------------------------------------------------------
+#
+# Reference geometry is built into the scene before the atlases so that it
+# sits underneath them, which also made a neuropil shell tab 0. The panel
+# then opened on the one tab with no glomeruli behind it.
+
+@pytest.mark.parametrize("space,expect", [
+    ("JRCFIB2018F", "neuprint_hemibrain"),   # three atlases; spaces.toml picks
+    ("FAFB14", "benton2025"),                # one atlas, behind fafb_neuropil
+])
+def test_it_opens_on_the_spaces_primary_atlas(registry, space, expect):
+    import napari
+
+    from lobemap.viewer.app import build_scene
+    from lobemap.viewer.panel import CompartmentPanel
+
+    try:
+        viewer = napari.Viewer(show=False, ndisplay=3)
+    except Exception as exc:                        # pragma: no cover
+        pytest.skip(f"no Qt display: {exc}")
+    try:
+        surfaces, contours = build_scene(viewer, registry, space)
+        panel = CompartmentPanel(viewer, surfaces, registry=registry,
+                                 contours=contours, space=space)
+        assert panel.currentWidget() is panel.tabs[expect]
+        assert panel.currentWidget().is_atlas
+    finally:
+        viewer.close()
+
+
+def test_the_open_tab_is_the_atlas_that_is_drawn(registry):
+    """The panel and the canvas must agree on which atlas is showing."""
+    import napari
+
+    from lobemap.viewer.app import build_scene
+    from lobemap.viewer.panel import CompartmentPanel
+
+    try:
+        viewer = napari.Viewer(show=False, ndisplay=3)
+    except Exception as exc:                        # pragma: no cover
+        pytest.skip(f"no Qt display: {exc}")
+    try:
+        surfaces, contours = build_scene(viewer, registry, "JRCFIB2018F")
+        panel = CompartmentPanel(viewer, surfaces, registry=registry,
+                                 contours=contours, space="JRCFIB2018F")
+        visible = [name for name, s in surfaces.items()
+                   if name in registry.atlases and s.layer.visible]
+        assert visible == [k for k, v in panel.tabs.items()
+                           if v is panel.currentWidget()]
+    finally:
+        viewer.close()
+
+
+def test_reference_tabs_come_after_every_atlas(registry):
+    """Neuropil and brain shells read last, whatever order the scene built.
+
+    They are added to the scene FIRST, so without a reordering step the
+    panel led with them.
+    """
+    import napari
+
+    from lobemap.viewer.app import build_scene
+    from lobemap.viewer.panel import CompartmentPanel
+
+    try:
+        viewer = napari.Viewer(show=False, ndisplay=3)
+    except Exception as exc:                        # pragma: no cover
+        pytest.skip(f"no Qt display: {exc}")
+    try:
+        surfaces, contours = build_scene(viewer, registry, "JRCFIB2018F")
+        panel = CompartmentPanel(viewer, surfaces, registry=registry,
+                                 contours=contours, space="JRCFIB2018F")
+        kinds = [panel.widget(i).is_atlas for i in range(panel.count())]
+        assert kinds == sorted(kinds, reverse=True), [
+            panel.tabText(i) for i in range(panel.count())
+        ]
+        assert not all(kinds), "this space has reference geometry to order"
+    finally:
+        viewer.close()

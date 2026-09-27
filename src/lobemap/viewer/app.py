@@ -849,7 +849,7 @@ def load_space(
     from .panel import CompartmentPanel
 
     panel = CompartmentPanel(viewer, surfaces, registry=registry,
-                             contours=contours)
+                             contours=contours, space=space)
     session.panel = panel
     session.dock = viewer.window.add_dock_widget(
         panel, area="right", name="Compartments"

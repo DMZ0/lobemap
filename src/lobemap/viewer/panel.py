@@ -450,7 +450,8 @@ class AtlasTab(QWidget):
 
 
 class CompartmentPanel(QTabWidget):
-    def __init__(self, viewer, surfaces: dict, registry=None, contours=None) -> None:
+    def __init__(self, viewer, surfaces: dict, registry=None, contours=None,
+                 space: str | None = None) -> None:
         super().__init__()
         self.viewer = viewer
         self.tabs: dict[str, AtlasTab] = {}
@@ -458,7 +459,16 @@ class CompartmentPanel(QTabWidget):
         # Read once for the whole panel: every tab joins against the same
         # table, and it is a 62-row csv.
         annotation = reference.load(registry.root) if registry else {}
-        for name, surface in surfaces.items():
+        # Atlases first, reference geometry last. `build_scene` adds the
+        # neuropil and brain shells before the atlases so they sit UNDER
+        # the glomeruli, but that is a stacking order and this is a reading
+        # order: the tabs with glomeruli in them come first. Sorting on a
+        # bool is stable, so each group keeps its scene order.
+        def is_reference(name: str) -> bool:
+            return registry is None or name not in registry.atlases
+
+        for name in sorted(surfaces, key=is_reference):
+            surface = surfaces[name]
             atlas = registry.atlases.get(name) if registry else None
             tab = AtlasTab(
                 surface,
@@ -469,6 +479,35 @@ class CompartmentPanel(QTabWidget):
             )
             self.tabs[name] = tab
             self.addTab(tab, name[:20])
+        self._open_default_tab(registry, space)
+
+    def _open_default_tab(self, registry, space: str | None) -> None:
+        """Open on an atlas, never on the reference geometry.
+
+        Neuropil and brain shells are added to the scene first so they sit
+        underneath the glomeruli, which also made one of them tab 0. That
+        tab lists whole neuropils -- no canonical name, no side, no
+        annotation -- so the panel opened on the one tab that says nothing
+        about glomeruli.
+
+        Which atlas is the space's own choice, `primary_atlas`, so the open
+        tab matches the atlas `show_primary_atlas` leaves drawn. It matters
+        only for JRCFIB2018F, the one space carrying several: it opens on
+        the neuPrint parcellation the Schlegel pair are compared against.
+        """
+        atlases = [name for name, tab in self.tabs.items() if tab.is_atlas]
+        if not atlases:
+            return              # a space with reference geometry only
+        target = atlases[0]
+        if registry is not None:
+            # Derivable from any atlas tab, so a caller that did not name
+            # the space still gets the declared choice rather than
+            # whichever atlas happens to be built first.
+            space = space or registry.atlases[target].native_space
+            primary = registry.primary_atlas(space)
+            if primary is not None and primary.id in self.tabs:
+                target = primary.id
+        self.setCurrentWidget(self.tabs[target])
 
     def highlight(self, layer_name: str, index: int) -> None:
         tab = self.tabs.get(layer_name)
