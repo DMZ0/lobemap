@@ -55,8 +55,8 @@ size = 1108619262
 [artifacts.neuprint_cns_glomeruli]
 path = "neuprint_cns_glomeruli.npz"
 kind = "file"
-sha256 = "173da17f5d2e3a2dba70e76df5707896740a0da7945dd399da81e6ca3ed8b6ed"
-size = 3231820
+sha256 = "ab4d6f657ac9924ec0736de71b65749c6521e7dc332275ec8bcb85d97126e1fb"
+size = 3231813
 
 [artifacts.neuprint_cns_neuropil]
 path = "neuprint_cns_neuropil.npz"
@@ -67,8 +67,8 @@ size = 11903398
 [artifacts.neuprint_hemibrain_glomeruli]
 path = "neuprint_hemibrain_glomeruli.npz"
 kind = "file"
-sha256 = "d5f3eeb81455cb759e4d82ff63f0c86796dcb519c703fdb247e679d6c50ca8bc"
-size = 2881901
+sha256 = "88d7caa950e0d73431cfc180b095183d6106beca82d2657ca797197978260115"
+size = 2881893
 
 [artifacts.neuprint_hemibrain_neuropil]
 path = "neuprint_hemibrain_neuropil.npz"

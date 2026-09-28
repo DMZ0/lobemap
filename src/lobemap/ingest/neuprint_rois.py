@@ -1,6 +1,8 @@
 """Ingest AL glomerular ROI meshes from neuPrint.
 
-Covers hemibrain and male CNS, which share the `AL-DA1(R)` naming convention.
+Covers hemibrain and male CNS, which share the `AL-DA1(R)` naming
+convention. The `AL-` qualifier is dropped on the way in; see
+`compartment_name`.
 Verified 2026-09-20 (see docs/probes/): male-cns:v1.0 has 58 glomeruli per side,
 complete and symmetric; male-cns:v0.9 has none, so the version must be pinned.
 hemibrain:v1.2.1 has 58 right / 19 left, plus one side-less `AL-DC3`.
@@ -21,6 +23,25 @@ from ..core.meshrepair import RepairReport, repair_meshset
 
 #: A glomerular ROI: "AL-DA1(R)", or side-less "AL-DC3".
 GLOM_RE = re.compile(r"^AL-(?P<name>[^()]+?)(?:\((?P<side>[LR])\))?$")
+
+def compartment_name(roi: str) -> str:
+    """The name a glomerulus is STORED under, without neuPrint's prefix.
+
+    neuPrint qualifies every glomerulus with the neuropil it sits in --
+    `AL-DA1(R)` -- which says nothing inside an antennal lobe atlas and
+    made these two read and sort differently from the four that do not
+    do it. The side suffix stays; only the prefix goes.
+
+    Applied at ingest so the container itself carries the name. Doing it
+    on load instead would have been a rule that, in practice, fired for
+    these two atlases alone.
+    """
+    m = GLOM_RE.match(roi)
+    if m is None:
+        return roi
+    side = m.group("side")
+    return f"{m.group('name')}({side})" if side else m.group("name")
+
 
 #: Whole-AL ROIs, kept as neuropil reference assets rather than glomeruli.
 NEUROPIL_RE = re.compile(r"^AL\((?P<side>[LR])\)$")
@@ -199,7 +220,8 @@ def ingest(
         if not len(v) or not len(f):
             skipped.append(f"{roi}: empty mesh")
             continue
-        raw.append((roi, v, f))
+        raw.append((compartment_name(roi) if role == "glomeruli" else roi,
+                    v, f))
 
     if not raw:
         raise ValueError(f"every {role} mesh failed for {dataset!r}: {skipped}")

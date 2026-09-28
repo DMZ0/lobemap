@@ -195,9 +195,8 @@ def test_registry_loads_and_derives_compartments(tmp_path):
     assert set(reg.spaces) == {"S1"}
     atlas = reg.atlases["a1"]
     assert len(atlas.compartments) == 3
-    # published_name comes from the mesh container, not from TOML, with
-    # neuPrint's redundant `AL-` qualifier dropped for display
-    assert atlas.compartments[0].published_name == "G0(R)"
+    # published_name comes from the mesh container, not from TOML
+    assert atlas.compartments[0].published_name == "AL-G0(R)"
     assert atlas.compartments[0].side == "R"
     assert reg.atlases_in_space("S1") == [atlas]
 

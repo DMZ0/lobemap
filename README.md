@@ -148,13 +148,19 @@ stamps the date it ran — but its *content* hash is, and the build prints it.
   glomerular parcellations drawn on top of each other are unreadable. The
   panel's tabs turn the others on.
 - A space's reference image — the virtual stain, or the Grabe confocal
-  channel — is shown whenever it has been fetched. `--show` turns on a
+  channel — is shown whenever it has been fetched, in grayscale, so the
+  coloured glomeruli drawn over it keep their own colours. `--show` turns on a
   layer that is off, by asset id or by role, for example `--show
   neuropil`.
-- The axis indicator in the bottom-left corner is labelled anatomically.
-  Each arrow carries the single pole it points at, so FAFB reads `R, V, P`
-  and the hemibrain `L, A, V` — the arrows run along increasing array
-  index, and which pole that reaches differs between spaces.
+- Two axis indicators share the corner in 3D. napari's own names the
+  **array** axes, `x`, `y`, `z`; a second names the **anatomy**, turned
+  onto it. No space is axis-aligned — anterior sits 15–18° off the
+  nearest array axis in the EM volumes and 31° in GRABE — so the two are
+  worth seeing side by side. Which pole each anatomical arrow carries is
+  chosen so that none of them lands near an `x`/`y`/`z` arrow.
+- In 2D only napari's remains. A slice is cut along array axes, so an
+  anatomical arrow over one would claim an alignment the slice does not
+  have.
 
 Both the mesh and contour layers stay in the layer list in either mode; the
 one the current mode cannot draw is simply switched off.

@@ -26,7 +26,7 @@ from .model import (
     Space,
     rotation_axis_vector,
 )
-from .names import Nomenclature, display_name, parse_roi
+from .names import Nomenclature, parse_roi
 
 
 def default_data_root(root: Path) -> Path:
@@ -207,13 +207,11 @@ class Registry:
         for i, name in enumerate(ms.names):
             _glom, side = parse_roi(name)
             side = side or default_side
-            # Resolved on the RAW name: the nomenclature table is keyed
-            # by what the source published, prefix and all.
             corr = self.names.resolve(atlas.id, name)
             out.append(
                 Compartment(
                     local_id=i,
-                    published_name=display_name(name),
+                    published_name=name,
                     side=side,
                     canonical=corr.canonical if corr else (),
                     relation=corr.relation if corr else "absent",
