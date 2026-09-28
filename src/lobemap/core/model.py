@@ -126,10 +126,17 @@ def anatomical_triad(space):
 
     The columns are the three anatomical directions and the labels name
     the pole each one points at, so arrow k reaches the pole written on
-    it. Which pole of each axis, and which arrow carries which axis, are
-    chosen so that no anatomical arrow lands near ANY arrow of the
-    fixed x/y/z triad it is drawn beside: of the 24 proper candidates,
-    the one whose closest approach to a world arrow is furthest away.
+    it.
+
+    The SIGN of each pole is what keeps the triad clear of the fixed
+    x/y/z one it is drawn beside: of the 24 proper candidates, the one
+    whose closest approach to a world arrow is furthest away.
+
+    Which arrow carries which axis is NOT that, and cannot be. The
+    objective is the worst column of a per-column quantity, so permuting
+    the columns leaves it exactly unchanged -- all three permutations of
+    a given sign set tie. The assignment falls to the tie-break below,
+    which takes the one sitting closest to the array axes.
 
     The world arrows are only the POSITIVE directions -- napari draws
     each along increasing index and cannot reverse one -- which is what
@@ -169,8 +176,10 @@ def anatomical_triad(space):
             # cos is decreasing in angle, so the largest component is
             # the nearest arrow and we want that as small as possible.
             closest = max(float(np.max(M[:, k])) for k in range(3))
-            # Tie-break on the trace, so that among equally separated
-            # candidates the arrow order stays the settled one.
+            # The three permutations of a sign set always tie on
+            # `closest`, so the trace is what actually settles which
+            # arrow carries which axis: the assignment nearest the
+            # array axes, which is also stable across edits.
             score = (-closest, float(np.trace(M)))
             if best is None or score > best[0]:
                 names = tuple(poles[order[k]][0 if signs[k] > 0 else 1]

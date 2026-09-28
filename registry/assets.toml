@@ -30,6 +30,7 @@ side = "both"
 path = "data/neuprint_cns_glomeruli.npz"
 [neuprint_cns_glomeruli.source]
 url = "https://neuprint-cns.janelia.org"
+doi = "10.1016/j.cell.2026.08.015"
 
 [neuprint_cns_neuropil]
 role = "neuropil"
@@ -39,6 +40,7 @@ side = "both"
 path = "data/neuprint_cns_neuropil.npz"
 [neuprint_cns_neuropil.source]
 url = "https://neuprint-cns.janelia.org"
+doi = "10.1016/j.cell.2026.08.015"
 
 # The fly's LEFT AL. The Bates 2020 masks these revise sat on FAFB's
 # image-right, which in this mirrored space is biologically left; Benton

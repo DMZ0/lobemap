@@ -60,7 +60,8 @@ exact commands.
 
 - hemibrain: https://neuprint.janelia.org — Scheffer LK, et al. *eLife*, 2020.
   doi:10.7554/eLife.57443 (CC BY 4.0)
-- male CNS: https://neuprint-cns.janelia.org — `male-cns:v1.0`
+- male CNS: https://neuprint-cns.janelia.org — `male-cns:v1.0`;
+  Berg S, et al. *Cell*, 2026. doi:10.1016/j.cell.2026.08.015
 
 ## Grabe 2015 — GRABE
 

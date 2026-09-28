@@ -8,12 +8,11 @@ each from a different volume and each using its own names. lobemap puts them
 in one viewer so they can be looked at side by side: as 3D meshes, or as
 exact cross-sections on a slice through the underlying image.
 
-The unit the viewer opens is a **coordinate space** — FAFB, the hemibrain,
-the male CNS, the Grabe light-microscopy template — not an atlas. A space
-holds every atlas native to it at once, together with that space's neuropil
-geometry and reference image. That is what lets two parcellations of the
-same volume be superposed: sharing a space is exactly the condition under
-which comparing them means anything.
+The viewer opens a **coordinate space** — FAFB, the hemibrain, the male
+CNS, or the Grabe light-microscopy template. A space holds every atlas
+native to it at once, together with that space's neuropil geometry and
+reference image, so the parcellations of one volume can be drawn over each
+other.
 
 ## Installing
 
@@ -62,6 +61,10 @@ uv run lobemap spaces
 uv run lobemap view JRCFIB2018F
 ```
 
+`lobemap --help` lists the rest, including tools for checking the data
+against its own geometry (`check`), comparing atlases (`reconcile`) and
+moving geometry between spaces (`bridge`).
+
 `lobemap` is installed into the project's virtual environment, so `uv run`
 is the simplest way to reach it. Activating the environment
 (`.venv/Scripts/Activate.ps1` on Windows, `source .venv/bin/activate`
@@ -72,12 +75,12 @@ installed package, so the commands work from any directory.
 
 | space | atlas | compartments |
 |---|---|---|
-| FAFB14 | Benton 2025 (Dataset EV2) | 58 |
-| JRCFIB2018F (hemibrain) | neuPrint hemibrain | 77 |
-| | Schlegel 2021 S11, from receptor neurons | 59 |
-| | Schlegel 2021 S12, from projection neurons | 58 |
-| JRCFIB2022M (male CNS) | neuPrint male CNS | 116 |
-| GRABE | Grabe 2015 | 108 |
+| FAFB14 | [Benton 2025](https://doi.org/10.1038/s44319-025-00476-8) (Dataset EV2) | 58 |
+| JRCFIB2018F (hemibrain) | neuPrint [hemibrain](https://doi.org/10.7554/eLife.57443) | 77 |
+| JRCFIB2018F | [Schlegel 2021](https://doi.org/10.7554/eLife.66018) S11, from receptor neurons | 59 |
+| JRCFIB2018F | [Schlegel 2021](https://doi.org/10.7554/eLife.66018) S12, from projection neurons | 58 |
+| JRCFIB2022M (male CNS) | neuPrint [male CNS](https://doi.org/10.1016/j.cell.2026.08.015) | 116 |
+| GRABE | [Grabe 2015](https://doi.org/10.1016/j.cub.2015.07.036) | 108 |
 
 Each space also carries its brain neuropils and one reference image. For
 Grabe, which is light microscopy, that is its own confocal stack. For the
@@ -86,11 +89,8 @@ predicted presynapses, binned and blurred into something that reads like an
 nc82 antibody stain, computed natively in each volume rather than warped in
 from light microscopy.
 
-Glomerulus names are scoped to a space. Two atlases can only be superimposed
-if they share one, so that is the only place their names have to agree, and
-each space keeps its own vocabulary rather than deferring to a single
-authority. Switching space may therefore change both the list of glomeruli
-and their colours.
+Glomerulus names are scoped to a space, so switching space may change both
+the list of glomeruli and their colours.
 
 ## Data
 
@@ -107,11 +107,10 @@ uv run lobemap fetch --asset hemibrain_stain
 ```
 
 `lobemap view` fetches anything a scene needs and cannot find, so the
-explicit `fetch` above is a way to get it over with rather than a
-requirement. That implicit fetch never pulls a stain, though — 2.4 GB
-nobody asked for is a different thing from 2.4 GB somebody typed — so
-after `fetch --nostains` the EM spaces keep opening without a backdrop
-until you ask for one. A stain that *is* on disk is always shown.
+explicit `fetch` above is a convenience rather than a requirement. It
+never fetches a stain, though: after `fetch --nostains` the EM spaces
+open without a backdrop until you ask for one. A stain that *is* on disk
+is always shown.
 
 You can also rebuild from source instead of downloading:
 
@@ -144,42 +143,23 @@ stamps the date it ran — but its *content* hash is, and the build prints it.
 - The control at the bottom right switches between spaces without
   restarting.
 - A space with several atlases opens on one of them — `primary_atlas` in
-  `registry/spaces.toml` — with the rest loaded and switched off, since two
-  glomerular parcellations drawn on top of each other are unreadable. The
+  `registry/spaces.toml` — with the rest loaded and switched off. The
   panel's tabs turn the others on.
 - A space's reference image — the virtual stain, or the Grabe confocal
-  channel — is shown whenever it has been fetched, in grayscale, so the
-  coloured glomeruli drawn over it keep their own colours. `--show` turns on a
-  layer that is off, by asset id or by role, for example `--show
-  neuropil`.
-- Two axis indicators share the corner in 3D. napari's own names the
-  **array** axes, `x`, `y`, `z`; a second names the **anatomy**, turned
-  onto it. No space is axis-aligned — anterior sits 15–18° off the
-  nearest array axis in the EM volumes and 31° in GRABE — so the two are
-  worth seeing side by side. Which pole each anatomical arrow carries is
-  chosen so that none of them lands near an `x`/`y`/`z` arrow.
-- In 2D only napari's remains. A slice is cut along array axes, so an
-  anatomical arrow over one would claim an alignment the slice does not
-  have.
+  channel — is shown in grayscale whenever it has been fetched. `--show`
+  turns on a layer that is off, by asset id or by role, for example
+  `--show neuropil`.
+- In 3D the corner carries two axis indicators: one for the array axes,
+  labelled `x`, `y`, `z`, and one for the anatomical axes. Each
+  anatomical arrow is labelled with the pole it points at, one from each
+  of `A`/`P`, `D`/`V` and `R`/`L`. The labels differ between spaces:
+  which pole of each axis is picked so that no anatomical arrow overlaps
+  an `x`/`y`/`z` one.
+- In 2D only the array indicator is shown, since a slice is cut along
+  array axes rather than anatomical ones.
 
 Both the mesh and contour layers stay in the layer list in either mode; the
 one the current mode cannot draw is simply switched off.
-
-## Checking the data
-
-```bash
-uv run lobemap check
-```
-
-This is a geometric harness, not a schema check: it confirms every
-glomerulus centroid lies inside its own antennal lobe, that each reference
-image is brighter at glomerulus centroids than at background, and that
-images and meshes occupy the same box in micrometres. An asset can be
-present, well-formed and in the wrong place, and only a measurement catches
-that.
-
-`lobemap --help` lists the rest, including tools for comparing atlases by
-geometry (`reconcile`) and moving geometry between spaces (`bridge`).
 
 ## Documentation
 
