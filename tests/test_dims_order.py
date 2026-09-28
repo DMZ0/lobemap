@@ -3,7 +3,7 @@
 napari applies `dims.order` to an Image but not to a Surface once nothing is
 non-displayed, so a permuted order in 3D transposes a volume out from under the
 meshes it is supposed to sit behind. Nothing warns; it looks like a
-registration failure. The first test pins that napari behaviour so we notice if
+registration failure. The first test pins that napari behavior so we notice if
 it ever changes; the rest pin our policy.
 """
 

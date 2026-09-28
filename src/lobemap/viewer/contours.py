@@ -5,7 +5,7 @@ are genuinely readable together. Nested semi-transparent surfaces are
 unreadable past two; outlines are not.
 
 Contours are computed exactly, by intersecting the mesh with the current slice
-plane, rather than by rasterising. That keeps them crisp at any zoom and avoids
+plane, rather than by rasterizing. That keeps them crisp at any zoom and avoids
 committing the pipeline to a voxel grid.
 
 They also restore identification in 2D: napari's Surface._get_value returns
@@ -49,13 +49,13 @@ class ContourOverlay:
         #: Compartments drawn as filled polygons rather than open paths.
         #: A napari `path` cannot be filled at all -- it is an open
         #: polyline -- so filling means changing the shape type, not just
-        #: the face colour. Mesh-plane intersections are closed loops, so
+        #: the face color. Mesh-plane intersections are closed loops, so
         #: reading them as polygons is geometrically honest.
         self.filled: set[int] = set()
         self.color = color
         #: Per-compartment RGBA, taken from the Surface layer, so a
-        #: glomerulus outline and its label are the colour of its own mesh
-        #: rather than one colour for the whole atlas. None keeps `color`,
+        #: glomerulus outline and its label are the color of its own mesh
+        #: rather than one color for the whole atlas. None keeps `color`,
         #: which is what the reference neuropil shells use.
         self.colors = None if colors is None else np.asarray(colors, float)
         self._axis = axis
@@ -169,9 +169,9 @@ class ContourOverlay:
 
     @staticmethod
     def _as_rgba(spec) -> tuple[float, float, float, float]:
-        """Any colour napari accepts -> four floats.
+        """Any color napari accepts -> four floats.
 
-        A layer's colour is not always a sequence of numbers: the neuropil
+        A layer's color is not always a sequence of numbers: the neuropil
         shells are the hex string "#9aa0a6", and indexing that gives "#",
         so filling one raised `could not convert string to float`. Names
         and hex both have to go through napari's own parser.
@@ -181,7 +181,7 @@ class ContourOverlay:
         return tuple(float(v) for v in np.asarray(transform_color(spec))[0])
 
     def _face_colors(self, owners):
-        """Per-shape face colour: the mesh colour, faded, or transparent."""
+        """Per-shape face color: the mesh color, faded, or transparent."""
         out = []
         for i in owners:
             if i not in self.filled:
@@ -238,12 +238,12 @@ class ContourOverlay:
             self.layer.text = {
                 "string": strings,
                 "size": TEXT_SIZE,
-                # One colour per shape, matching that glomerulus's mesh. A
-                # single colour for the layer would put every label in the
-                # atlas colour while the outline under it was its own.
+                # One color per shape, matching that glomerulus's mesh. A
+                # single color for the layer would put every label in the
+                # atlas color while the outline under it was its own.
                 #
                 # Spelled as ManualColorEncoding rather than a bare list:
-                # napari cannot tell a list of N colours from one colour
+                # napari cannot tell a list of N colors from one color
                 # given component-wise, and silently collapsed the list to a
                 # single constant -- `text.color` came back 0-dimensional.
                 "color": self._text_color(owners),

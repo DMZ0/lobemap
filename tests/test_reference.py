@@ -1,4 +1,4 @@
-"""Normalising the pooled reference cells.
+"""Normalizing the pooled reference cells.
 
 Each cell in `glomerulus_ground_truth.csv` merges several publications, so
 one receptor can arrive spelled three ways in one string. The cases here
@@ -39,7 +39,7 @@ REGISTRY = Path(__file__).resolve().parents[1] / "registry"
     ("", ""), ("-", ""), ("UNK", ""),
 ])
 def test_receptor_cells(raw, want):
-    assert reference.normalise(raw, split_commas=True) == want
+    assert reference.normalize(raw, split_commas=True) == want
 
 
 @pytest.mark.parametrize(("raw", "want"), [
@@ -52,7 +52,7 @@ def test_receptor_cells(raw, want):
     ("Ai1A (Ab6A); ab6", "ab6; Ai1A (Ab6A)"),
 ])
 def test_sensillum_cells(raw, want):
-    assert reference.normalise(raw, split_commas=False) == want
+    assert reference.normalize(raw, split_commas=False) == want
 
 
 def test_the_shipped_table_loads_and_covers_the_atlases():

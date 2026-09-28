@@ -56,7 +56,7 @@ def test_a_table_that_matches_is_clean():
 
 
 def test_add_missing_leaves_curated_rows_alone():
-    """The whole point: adding a row must not rewrite its neighbours."""
+    """The whole point: adding a row must not rewrite its neighbors."""
     nom = _curated()
     added = nom.add_missing("a", ["VP1(L)", "VC3l(R)", "NEW(L)"])
     assert added == ["NEW(L)"]

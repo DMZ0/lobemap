@@ -171,7 +171,7 @@ def test_orient_anterior_points_the_camera_down_the_measured_axis(viewer):
 
 
 def test_an_exactly_axis_aligned_camera_is_flipped_by_napari(viewer):
-    """Why `GIMBAL_NUDGE_DEG` exists. Pins the napari behaviour.
+    """Why `GIMBAL_NUDGE_DEG` exists. Pins the napari behavior.
 
     At exact gimbal lock napari's vispy round trip -- angles to quaternion and
     back -- cannot recover the third Euler angle and zeroes it, which returns
@@ -280,7 +280,7 @@ def test_a_space_with_no_atlases_has_no_primary():
 
 
 def test_the_initial_fit_follows_the_canvas(viewer):
-    """Maximising is asynchronous, so a fit done once lands on the wrong size.
+    """Maximizing is asynchronous, so a fit done once lands on the wrong size.
 
     Measured through the real startup, before and after: FAFB 42% -> 81% of
     the canvas, Grabe 50% -> 96%, hemibrain 57% -> 96%, male CNS -> 97%.

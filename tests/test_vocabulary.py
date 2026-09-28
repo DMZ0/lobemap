@@ -57,7 +57,7 @@ def test_vocabularies_are_independent(registry):
 
 
 def test_the_vocabulary_is_stable(registry):
-    """Colour is assigned by position, so the order cannot wobble."""
+    """Color is assigned by position, so the order cannot wobble."""
     for space_id in registry.spaces:
         first = registry.vocabulary(space_id)
         assert first == registry.vocabulary(space_id)

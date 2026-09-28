@@ -1,11 +1,11 @@
 """A one-compartment mesh must not take the viewer down.
 
 A reference shell with exactly one compartment makes a Surface layer from a
-single colour. vispy's GLSL step generator asserts `ncolors >= 2`, and the
+single color. vispy's GLSL step generator asserts `ncolors >= 2`, and the
 resulting AssertionError surfaces deep inside vispy with nothing pointing
 back at the mesh that caused it. The registry has no such asset today --
 `bates2020_brain` had one compartment and has been superseded -- so this is
-tested synthetically rather than against the catalogue.
+tested synthetically rather than against the catalog.
 """
 
 from __future__ import annotations
@@ -32,7 +32,7 @@ def test_step_colormap_is_usable_by_vispy(n):
     assert len(cmap.controls) == len(cmap.colors) + 1
 
 
-def test_single_colour_is_duplicated_not_invented():
+def test_single_color_is_duplicated_not_invented():
     colors = categorical_colors(1)
     cmap = step_colormap(colors)
     assert len(cmap.colors) == 2
@@ -40,11 +40,11 @@ def test_single_colour_is_duplicated_not_invented():
     assert np.allclose(cmap.colors[0], colors[0])
 
 
-def test_contrast_limits_still_centre_the_single_bin():
-    """Duplicating the colour must not shift where value 0 lands."""
+def test_contrast_limits_still_center_the_single_bin():
+    """Duplicating the color must not shift where value 0 lands."""
     lo, hi = contrast_limits_for(1)
     assert lo == -0.5 and hi == 0.5
     cmap = step_colormap(categorical_colors(1))
     # Value 0 maps to the middle of the range, which is inside both bins --
-    # and both bins are the same colour, so the result is unambiguous.
+    # and both bins are the same color, so the result is unambiguous.
     assert np.allclose(cmap.map(np.array([0.5]))[0], categorical_colors(1)[0])

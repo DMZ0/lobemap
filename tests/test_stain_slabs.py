@@ -19,8 +19,8 @@ from lobemap.ingest.virtual_stain import build_stain, build_stain_slabwise
 def _points(n=20_000, seed=0):
     rng = np.random.default_rng(seed)
     # Three blobs, so there is real structure across slab seams.
-    centres = np.array([[6.0, 5.0, 4.0], [14.0, 9.0, 6.0], [20.0, 4.0, 8.0]])
-    pts = np.vstack([c + rng.normal(0, 1.5, (n // 3, 3)) for c in centres])
+    centers = np.array([[6.0, 5.0, 4.0], [14.0, 9.0, 6.0], [20.0, 4.0, 8.0]])
+    pts = np.vstack([c + rng.normal(0, 1.5, (n // 3, 3)) for c in centers])
     return pts
 
 

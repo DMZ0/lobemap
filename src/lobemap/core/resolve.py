@@ -12,7 +12,7 @@ Two rules, both from measurement:
    plausible wrong geometry rather than raising. So mirroring happens in the
    source space, which is chosen to be one where mirroring is meaningful.
 
-2. **Storage is micrometres; navis wants template-native units.** Every
+2. **Storage is micrometers; navis wants template-native units.** Every
    conversion is explicit and asserted, because nm/um slips are the most likely
    way to be silently 1000x off.
 """
@@ -63,7 +63,7 @@ class ResolveKey:
 
 
 def template_scale_to_um(template: str) -> float:
-    """Multiplier taking that template's native units into micrometres."""
+    """Multiplier taking that template's native units into micrometers."""
     import flybrains
 
     t = getattr(flybrains, template, None)
@@ -85,9 +85,9 @@ def resolve_points(
     mirror: bool = False,
     allow_binary: bool | None = None,
 ) -> tuple[np.ndarray, dict]:
-    """Transform (n, 3) points in micrometres between two templates.
+    """Transform (n, 3) points in micrometers between two templates.
 
-    Returns the transformed points, also in micrometres, plus a record of what
+    Returns the transformed points, also in micrometers, plus a record of what
     was done -- suitable for a Derivation.
     """
     src_scale = template_scale_to_um(source_template)

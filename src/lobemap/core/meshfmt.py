@@ -4,7 +4,7 @@ One .npz per atlas holding every compartment concatenated, plus offsets so a
 single compartment can be sliced out in O(1). That matters because the viewer
 rebuilds its Surface layer on every selection change.
 
-Vertices are ALWAYS micrometres, in the asset's native space. Storing anything
+Vertices are ALWAYS micrometers, in the asset's native space. Storing anything
 else here is the single most likely way to produce confident, wrong geometry.
 """
 
@@ -28,7 +28,7 @@ class MeshSet:
     `face_offsets` are both length K+1 for K compartments.
     """
 
-    vertices: np.ndarray  # (N, 3) float32, micrometres
+    vertices: np.ndarray  # (N, 3) float32, micrometers
     faces: np.ndarray  # (M, 3) int32, global vertex indices
     vertex_offsets: np.ndarray  # (K+1,) int64
     face_offsets: np.ndarray  # (K+1,) int64
@@ -138,7 +138,7 @@ class MeshSet:
         return v.mean(axis=0) if len(v) else np.full(3, np.nan, np.float32)
 
     def extent_um(self) -> np.ndarray:
-        """Bounding-box extent of the whole set, in micrometres."""
+        """Bounding-box extent of the whole set, in micrometers."""
         if not len(self.vertices):
             return np.zeros(3)
         return self.vertices.max(axis=0) - self.vertices.min(axis=0)

@@ -7,7 +7,7 @@ ordinary run printed a line about a crash that had not happened and
 dropped an empty file in the temp directory. Measured on one machine: 54
 empty files out of 55 launches, against a single real report.
 
-Driven through subprocesses, because all of the behaviour is at exit.
+Driven through subprocesses, because all of the behavior is at exit.
 """
 
 from __future__ import annotations

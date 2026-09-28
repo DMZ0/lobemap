@@ -63,7 +63,7 @@ def sha256_file(path: Path, chunk: int = CHUNK) -> tuple[str, int]:
 def zip_directory(src: Path, dst: Path) -> Path:
     """Zip a store deterministically enough to re-hash to the same value.
 
-    Entries are sorted and timestamps normalised, so zipping the same store
+    Entries are sorted and timestamps normalized, so zipping the same store
     twice produces identical bytes. Without that, a rebuild would appear to
     change data that had not changed.
     """

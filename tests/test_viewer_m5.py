@@ -167,12 +167,12 @@ def test_the_neuropil_shell_stays_off(registry, viewer):
     assert not surfaces["neuprint_hemibrain_neuropil"].layer.visible
 
 
-def test_contours_and_labels_take_their_mesh_colour(registry):
-    """A glomerulus is one colour, in 3D and in 2D and on its label.
+def test_contours_and_labels_take_their_mesh_color(registry):
+    """A glomerulus is one color, in 3D and in 2D and on its label.
 
-    Colouring per atlas meant every outline in a scene shared one hue, so a
+    Coloring per atlas meant every outline in a scene shared one hue, so a
     slice said which atlas a shape came from but not which glomerulus --
-    while the mesh of that same glomerulus was already colour-coded by
+    while the mesh of that same glomerulus was already color-coded by
     canonical name.
     """
     import numpy as np
@@ -206,29 +206,29 @@ def test_contours_and_labels_take_their_mesh_colour(registry):
             np.testing.assert_allclose(
                 edges[shape][:3], surface.colors[owner][:3], atol=1e-2,
                 err_msg=f"{overlay.meshset.names[owner]} outline is not its "
-                        f"mesh colour",
+                        f"mesh color",
             )
 
-        # A bare list of colours is indistinguishable from one colour given
+        # A bare list of colors is indistinguishable from one color given
         # component-wise, and napari collapses it to a constant. The
         # encoding must survive as a per-shape array.
         encoding = overlay.layer.text.color
         array = np.asarray(getattr(encoding, "array", encoding))
         assert array.shape == (len(owners), 4), (
-            f"label colours collapsed to {array.shape}; they are not per-shape"
+            f"label colors collapsed to {array.shape}; they are not per-shape"
         )
         for shape, owner in enumerate(owners):
             np.testing.assert_allclose(
                 array[shape][:3], surface.colors[owner][:3], atol=1e-2,
                 err_msg=f"{overlay.meshset.names[owner]} label is not its "
-                        f"mesh colour",
+                        f"mesh color",
             )
     finally:
         viewer.close()
 
 
-def test_reference_shells_keep_one_colour(registry):
-    """Context geometry stays grey; colouring it would compete."""
+def test_reference_shells_keep_one_color(registry):
+    """Context geometry stays gray; coloring it would compete."""
     napari = pytest.importorskip("napari")
     from lobemap.viewer.app import REFERENCE_CONTOUR_COLOR, build_scene
 

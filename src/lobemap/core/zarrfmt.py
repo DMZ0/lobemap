@@ -23,7 +23,7 @@ what keeps the reducer well defined -- an axis of size 1 cannot be halved, and
 treating the factor as uniform would either crash or silently drop the axis.
 
 A level whose factor on some axis is `f` has a voxel `f` times wider there,
-and its first voxel centre sits `(f - 1) / 2` original voxels further in. Both
+and its first voxel center sits `(f - 1) / 2` original voxels further in. Both
 go into each dataset's `coordinateTransformations`; getting the translation
 wrong shifts coarse levels by up to half a voxel against the meshes, which
 reads as a registration error rather than a storage bug.

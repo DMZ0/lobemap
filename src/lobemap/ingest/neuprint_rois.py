@@ -46,7 +46,7 @@ def compartment_name(roi: str) -> str:
 #: Whole-AL ROIs, kept as neuropil reference assets rather than glomeruli.
 NEUROPIL_RE = re.compile(r"^AL\((?P<side>[LR])\)$")
 
-#: Plausible size of a SINGLE compartment, per role, in micrometres.
+#: Plausible size of a SINGLE compartment, per role, in micrometers.
 #: Sizing against one compartment rather than the whole set makes the unit
 #: check independent of how many lobes or sides a dataset happens to contain --
 #: the global extent of "all glomeruli" differs ~2x between a one-sided and a
@@ -194,7 +194,7 @@ def ingest(
     role: str = "glomeruli",
     repair: bool = True,
 ) -> IngestResult:
-    """Fetch AL ROI meshes and return a MeshSet in micrometres."""
+    """Fetch AL ROI meshes and return a MeshSet in micrometers."""
     client, rois = fetch_rois(server, dataset, token)
 
     if role == "glomeruli":

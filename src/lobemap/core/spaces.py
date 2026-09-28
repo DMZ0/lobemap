@@ -90,7 +90,7 @@ def choose_path(source: str, target: str, allow_binary: bool | None = None) -> d
     """Pick the route.
 
     Default (`allow_binary=None`) takes navis's own choice when the required
-    binaries are present, because its weighting minimises WARPS and is
+    binaries are present, because its weighting minimizes WARPS and is
     therefore an accuracy heuristic -- overriding it can make results worse.
 
     When a binary-dependent edge is unusable, fall back to a binary-free route.

@@ -21,7 +21,7 @@ leaves which end is which to be worked out from the arrow. A label that
 names one pole cannot be read as an axis name, and cannot contradict the
 arrow it sits on, because it is derived from where that arrow goes.
 
-Labelling every arrow `A`, `D`, `L` regardless was considered and is not
+Labeling every arrow `A`, `D`, `L` regardless was considered and is not
 possible here: `CanvasAxesOverlay` has no way to reverse an arrow, so on
 FAFB's third axis the label would point opposite to the arrow under it --
 the same disagreement that got the old Vectors layer removed, below.
@@ -37,7 +37,7 @@ makes it independent of where the data happens to sit, and of pan and
 zoom.
 
 There used to be a second, world-space `anatomical axes` Vectors layer here
-as well, coloured per anatomical axis and pointing at each positive pole.
+as well, colored per anatomical axis and pointing at each positive pole.
 Two indicators for one thing was already redundant, and worse, they
 disagreed: because its arrows pointed at the anatomical pole rather than up
 the array axis, they ran OPPOSITE to the overlay's in 8 of the 12
@@ -122,7 +122,7 @@ def _vispy_axes_overlay(viewer):
 
     Reached through the canvas's overlay map rather than rebuilt, because
     the whole point is to keep napari's triad -- its geometry, arrowheads,
-    colours, sizing and font -- and change only where it points.
+    colors, sizing and font -- and change only where it points.
     """
     model = None
     for holder in ("canvas", "scene"):
@@ -152,7 +152,7 @@ def _vispy_axes_node(viewer):
 
 
 def _table(*hexes):
-    """A vispy colour table from hex colours given for x, y, z.
+    """A vispy color table from hex colors given for x, y, z.
 
     Reversed, because the visual indexes the table by `ndim - 1 - axis`
     rather than by the axis: entry 0 is the LAST array axis. Doubled to
@@ -166,9 +166,9 @@ def _table(*hexes):
     return rows + rows
 
 
-#: Okabe-Ito, which stays distinguishable to a colour-blind reader. One
+#: Okabe-Ito, which stays distinguishable to a color-blind reader. One
 #: triple names the voxel grid, the other the anatomy, so the two triads
-#: never share a colour.
+#: never share a color.
 VOXEL_COLORS = _table("#56B4E9", "#CC79A7", "#F0E442")
 ANATOMY_COLORS = _table("#D55E00", "#009E73", "#0072B2")
 
@@ -206,7 +206,7 @@ def apply_axis_mode(viewer, space) -> str:
 
     napari's triad is left exactly as it comes: the ARRAY axes, x/y/z,
     cyan/magenta/yellow. The anatomy is a SECOND triad beside it, turned
-    onto the measured frame, red/green/blue, labelled A, D and R or L.
+    onto the measured frame, red/green/blue, labeled A, D and R or L.
 
     Two rather than one because they are two different facts and both
     are worth having. Turning napari's own onto the anatomy, as an
@@ -248,7 +248,7 @@ def apply_axis_mode(viewer, space) -> str:
 
     with contextlib.suppress(Exception):
         # napari's own, put back the way it comes in case a previous
-        # version of this turned or recoloured it.
+        # version of this turned or recolored it.
         overlay.node.axes.transform = NullTransform()
         overlay.node.axes._default_color = VOXEL_COLORS
         overlay._on_data_change()

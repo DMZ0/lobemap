@@ -12,8 +12,8 @@ from .contours import ContourOverlay
 from .contours import install as install_contours
 from .layers import AtlasSurface, canonical_colors, match_label_colors
 
-#: Distinct flat colours for contour overlays, one per atlas, so two atlases
-#: superimposed in slice view are told apart by colour rather than by shape.
+#: Distinct flat colors for contour overlays, one per atlas, so two atlases
+#: superimposed in slice view are told apart by color rather than by shape.
 ATLAS_CONTOUR_COLORS = [
     "#ff7f0e", "#1f77b4", "#2ca02c", "#d62728",
     "#9467bd", "#17becf", "#e377c2", "#bcbd22",
@@ -100,7 +100,7 @@ def build_scene(
     viewer used to be able to bridge atlases in from other spaces, which made
     a scene's contents span vocabularies: each space names its glomeruli in
     its own terms, so a bridged atlas arrived with names the host space does
-    not define, and the panel and the colour palette had to reconcile them
+    not define, and the panel and the color palette had to reconcile them
     through a single global vocabulary. Dropping it is what lets nomenclature
     be per-space.
 
@@ -141,7 +141,7 @@ def build_scene(
         surfaces[atlas.id] = AtlasSurface(
             viewer, meshset, name=atlas.title or atlas.id,
             # The SPACE's vocabulary, not a global one: a glomerulus is
-            # one colour across the atlases it can be compared with, which
+            # one color across the atlases it can be compared with, which
             # is exactly the atlases sharing its space.
             colors=canonical_colors(atlas.compartments, vocabulary),
         )
@@ -149,7 +149,7 @@ def build_scene(
     if not surfaces:
         raise MissingAssets(space, registry)
 
-    # After the atlases, because the colours are read out of their Surface
+    # After the atlases, because the colors are read out of their Surface
     # layers rather than recomputed.
     for layer in viewer.layers:
         if layer.metadata.get("lobemap", {}).get("kind") == "labels":
@@ -174,7 +174,7 @@ def build_scene(
 #: Per-role display defaults for image layers.
 #:
 #: Magenta for the stain because it reads as a fluorescence channel against
-#: the grey template and the coloured surfaces, and because additive blending
+#: the gray template and the colored surfaces, and because additive blending
 #: composites it cleanly over them.
 #:
 #: `gamma` below 1 lifts the dim end, which a synapse-density map needs: the
@@ -188,7 +188,7 @@ def build_scene(
 ROLE_DISPLAY = {
     "template_image": {"colormap": "gray"},
     "virtual_stain": {
-        # Grey, not a hue. These are reference imagery under coloured
+        # Gray, not a hue. These are reference imagery under colored
         # glomeruli, and a magenta wash tinted every mesh drawn over it.
         "colormap": "gray",
         "gamma": 0.7,
@@ -249,7 +249,7 @@ DIMS_ORDER_XYZ = (2, 1, 0)
 #: decomposition unique and the roll survives. One degree across a 700 um
 #: brain is about 12 um of depth difference edge to edge, invisible, and it
 #: is a yaw about the dorsal axis so it reads as "very slightly turned"
-#: rather than tilted. `tests/test_default_view.py` pins the napari behaviour
+#: rather than tilted. `tests/test_default_view.py` pins the napari behavior
 #: so this can be dropped if it is ever fixed upstream.
 GIMBAL_NUDGE_DEG = 1.0
 
@@ -299,16 +299,16 @@ def maximize(viewer) -> bool:
 
     napari exposes no public API for this, so it goes through the Qt window,
     and it is allowed to fail: headless runs and the tests have no window
-    manager, and a viewer that cannot be maximised is still a usable viewer.
+    manager, and a viewer that cannot be maximized is still a usable viewer.
 
     Two quirks, both of which produce a window that *reports* itself
-    maximised at 933x700:
+    maximized at 933x700:
 
     - Called before the event loop turns, `showMaximized` sets the window
       state without the window manager ever resizing anything. So it is also
       deferred with a zero-delay timer.
     - Once that state is set, a second `showMaximized` is a no-op, because Qt
-      believes the window is already maximised. `showNormal` first clears the
+      believes the window is already maximized. `showNormal` first clears the
       state so the next call actually takes effect.
     """
     window = getattr(getattr(viewer, "window", None), "_qt_window", None)
@@ -386,7 +386,7 @@ def install_home_orientation(viewer, space) -> bool:
 def install_initial_fit(viewer, margin: float = 0.02) -> bool:
     """Keep refitting until the window settles, then stop at the first touch.
 
-    Maximising is asynchronous, and the canvas can still report a zero width
+    Maximizing is asynchronous, and the canvas can still report a zero width
     while the layout resolves, so *when* the usable size appears varies from
     run to run. A single fit, or a one-shot on the first resize, therefore
     lands on the right size only sometimes: measured across two spaces, Grabe
@@ -490,7 +490,7 @@ def _add_images(viewer, registry: Registry, space: str) -> list:
     """Reference images: the LM template, and the virtual synapse stain.
 
     scale and translate come from the Volume itself, so the image sits in the
-    same micrometre world as the meshes. Getting either wrong yields a
+    same micrometer world as the meshes. Getting either wrong yields a
     plausible picture that is simply in the wrong place, which is why the
     stain has its own alignment validator.
     """
@@ -501,7 +501,7 @@ def _add_images(viewer, registry: Registry, space: str) -> list:
         volume = registry.volume(asset.id)
 
         if asset.kind == "labels":
-            # A segmentation, not an intensity image: napari colours it by id
+            # A segmentation, not an intensity image: napari colors it by id
             # and picks values rather than interpolating them, so none of the
             # colormap/gamma/rendering defaults apply.
             layer = viewer.add_labels(
@@ -518,7 +518,7 @@ def _add_images(viewer, registry: Registry, space: str) -> list:
                 "kind": "labels",
                 "role": asset.role,
                 # Written at ingest: voxel value -> the name the matching
-                # mesh carries, which is what lets the two be coloured alike.
+                # mesh carries, which is what lets the two be colored alike.
                 "label_names": {
                     int(k): v
                     for k, v in (volume.meta.get("label_names") or {}).items()
@@ -579,9 +579,9 @@ def _add_images(viewer, registry: Registry, space: str) -> list:
 #: detaching on, switching scenes in 2D faults every run; with it off, every
 #: combination tested survives. Unusable layers are still hidden, so the
 #: canvas shows the same thing either way -- what changes is that they stay
-#: listed, greyed out, instead of disappearing.
+#: listed, grayed out, instead of disappearing.
 #:
-#: Set True to get the original behaviour back, and do not switch scenes
+#: Set True to get the original behavior back, and do not switch scenes
 #: while in 2D.
 DETACH_UNUSABLE_LAYERS = False
 
@@ -619,7 +619,7 @@ def install_display_mode(viewer, surfaces, contours, images=(),
 
     - **Meshes in 3D, contours in 2D.** Both are removed from the layer list
       rather than merely hidden, so the list holds only what is usable. The
-      layer objects are kept, so contrast, colour and selection survive the
+      layer objects are kept, so contrast, color and selection survive the
       round trip.
     - **Images pin a pyramid level in 3D.** napari's automatic choice there is
       the coarsest level; `level_for_3d` picks the finest one that fits in a
@@ -715,8 +715,8 @@ def _add_contours(viewer, registry, surfaces) -> dict[str, ContourOverlay]:
             width=REFERENCE_CONTOUR_WIDTH if reference else 0.35,
             selection=set(surface.selection),
             # The atlas palette, so an outline and its label match the mesh.
-            # Reference shells stay a single grey: they are context, and
-            # colouring each neuropil would compete with the glomeruli.
+            # Reference shells stay a single gray: they are context, and
+            # coloring each neuropil would compete with the glomeruli.
             colors=None if reference else surface.colors,
         )
     # The overlays carry their own event handlers, so a scene switch can
@@ -937,7 +937,7 @@ def run(
     switcher.settle()
 
     maximize(viewer)
-    # Maximising is asynchronous, so the fit follows the canvas rather than
+    # Maximizing is asynchronous, so the fit follows the canvas rather than
     # running once and hoping. `load_space` already installed one; this is
     # after the dock widgets, which change the canvas size.
     install_initial_fit(viewer)

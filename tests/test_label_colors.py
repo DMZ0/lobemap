@@ -1,4 +1,4 @@
-"""A voxel mask must be the same colour as the mesh of the same glomerulus.
+"""A voxel mask must be the same color as the mesh of the same glomerulus.
 
 The masks and the meshes are two renderings of one segmentation, so a
 mismatch is not a cosmetic issue -- it makes the two layers unreadable
@@ -53,7 +53,7 @@ def test_mask_colors_equal_mesh_colors(registry):
             mesh = np.asarray(
                 surface.colors[surface.meshset.names.index(name)], dtype=float
             )
-            assert value in color_dict, f"{name} (value {value}) is uncoloured"
+            assert value in color_dict, f"{name} (value {value}) is uncolored"
             np.testing.assert_allclose(
                 np.asarray(color_dict[value], dtype=float), mesh, atol=1e-6,
                 err_msg=f"{name} differs between its mask and its mesh",
@@ -64,8 +64,8 @@ def test_mask_colors_equal_mesh_colors(registry):
         viewer.close()
 
 
-def test_an_unnamed_value_is_transparent_not_miscoloured():
-    """A value with no name must vanish, not borrow another's colour."""
+def test_an_unnamed_value_is_transparent_not_miscolored():
+    """A value with no name must vanish, not borrow another's color."""
     from lobemap.viewer.layers import direct_label_colormap
 
     cmap = direct_label_colormap({3: (1.0, 0.0, 0.0, 1.0)})

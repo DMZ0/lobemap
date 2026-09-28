@@ -30,7 +30,7 @@ from pathlib import Path
 
 import numpy as np
 
-#: Candidate scales from source units into micrometres.
+#: Candidate scales from source units into micrometers.
 SCALE_CANDIDATES = [
     (8e-3, "px8nm"),
     (1e-3, "nm"),
@@ -130,7 +130,7 @@ def hemibrain_presynapses(
     info: dict | None = None,
     progress=None,
 ) -> Iterator[np.ndarray]:
-    """Yield presynapse positions in micrometres, one batch per shard.
+    """Yield presynapse positions in micrometers, one batch per shard.
 
     Deduplication is global: the same T-bar appears in every shard holding one
     of its PSDs, so per-shard uniqueness is not enough. Shards are collapsed
@@ -172,7 +172,7 @@ def malecns_presynapses(
     batch_size: int = 8_000_000,
     progress=None,
 ) -> Iterator[np.ndarray]:
-    """Yield presynapse positions in micrometres from the syn-points feather.
+    """Yield presynapse positions in micrometers from the syn-points feather.
 
     Rows are individual points with a `kind` of PreSyn or PostSyn, so no
     deduplication is needed. The columns are stored in the order z, y, x and
@@ -221,7 +221,7 @@ def fafb_presynapses(
     block_size: int = 1 << 26,
     progress=None,
 ) -> Iterator[np.ndarray]:
-    """Yield presynapse positions in micrometres from the Princeton table.
+    """Yield presynapse positions in micrometers from the Princeton table.
 
     One row is one (pre, post) pair, so `pre_*` repeats once per postsynaptic
     partner and must be collapsed -- otherwise every T-bar is weighted by its

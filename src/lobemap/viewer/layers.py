@@ -30,18 +30,18 @@ def categorical_colors(n: int, seed: int = 0) -> np.ndarray:
 
 
 def canonical_colors(compartments, canonical_order, fallback=(0.6, 0.6, 0.6, 1.0)):
-    """One colour per canonical glomerulus, shared by every atlas.
+    """One color per canonical glomerulus, shared by every atlas.
 
-    Colour was previously the compartment's position in its own file, so DA1
+    Color was previously the compartment's position in its own file, so DA1
     came out orange in Bates (index 39 of 58) and red-brown in Benton (index
     34 of 58). In a viewer whose whole purpose is superposing atlases in one
-    space, the same glomerulus has to be the same colour, or the overlay
+    space, the same glomerulus has to be the same color, or the overlay
     cannot be read.
 
-    `canonical_order` fixes the palette: a name's colour depends only on its
-    position in the shared vocabulary, so adding an atlas never recolours an
+    `canonical_order` fixes the palette: a name's color depends only on its
+    position in the shared vocabulary, so adding an atlas never recolors an
     existing one. A compartment carrying several canonical names -- Grabe's
-    unresolved VP1 -- takes the colour of the first, and the parts of a split
+    unresolved VP1 -- takes the color of the first, and the parts of a split
     -- Schlegel's VM6l/VM6m/VM6v -- all take VM6's, which is what makes them
     read as one structure.
     """
@@ -67,10 +67,10 @@ def _hsv_to_rgba(h: np.ndarray, s: np.ndarray, v: np.ndarray) -> np.ndarray:
 def step_colormap(colors: np.ndarray, name: str = "compartments"):
     """A napari Colormap mapping value i to colors[i] with no blending.
 
-    With 'zero' interpolation napari wants one more control point than colour:
-    the controls are bin *edges*, so n colours need n+1 edges.
+    With 'zero' interpolation napari wants one more control point than color:
+    the controls are bin *edges*, so n colors need n+1 edges.
 
-    A single colour is duplicated first. vispy's GLSL step generator asserts
+    A single color is duplicated first. vispy's GLSL step generator asserts
     `ncolors >= 2`, so a one-compartment mesh -- a single-ROI reference shell --
     otherwise brings the whole viewer down when the layer is created, with an
     AssertionError far from the cause.
@@ -92,11 +92,11 @@ def step_colormap(colors: np.ndarray, name: str = "compartments"):
 def direct_label_colormap(values_to_colors, name: str = "labels"):
     """A napari colormap painting each label value with a given RGBA.
 
-    Labels are a segmentation, so they need a value->colour dict rather than
+    Labels are a segmentation, so they need a value->color dict rather than
     the stepped ramp a Surface uses; napari calls that DirectLabelColormap.
     `None` is the fallback for any value not listed, and is transparent --
     an unnamed label should disappear rather than take some other
-    glomerulus's colour.
+    glomerulus's color.
     """
     from napari.utils.colormaps import DirectLabelColormap
 
@@ -115,21 +115,21 @@ def colors_by_name(surface) -> dict[str, tuple]:
 
 
 def match_label_colors(layer, surfaces) -> int:
-    """Paint a Labels layer the same colours as the meshes of the same names.
+    """Paint a Labels layer the same colors as the meshes of the same names.
 
     The voxel masks and the meshes are two renderings of one segmentation, so
     a glomerulus that is olive as a mesh has to be olive as voxels too, or the
     two layers cannot be read against each other at all.
 
-    The join is by NAME, and the colours are read out of the Surface layer
+    The join is by NAME, and the colors are read out of the Surface layer
     rather than recomputed: recomputing would mean repeating the palette,
     the canonical ordering and the fallback, and any divergence between the
     two copies would show up as a quiet mismatch rather than an error. The
     value->name map travels in the volume's own metadata, written at ingest
     (`label_names`), so nothing here needs the source Amira header.
 
-    Returns how many values were coloured; 0 means nothing matched and the
-    layer is left with napari's own colours.
+    Returns how many values were colored; 0 means nothing matched and the
+    layer is left with napari's own colors.
     """
     names = (layer.metadata.get("lobemap", {}) or {}).get("label_names")
     if not names:
@@ -155,10 +155,10 @@ def match_label_colors(layer, surfaces) -> int:
 
 
 def contrast_limits_for(n: int) -> tuple[float, float]:
-    """Limits that place integer value i at the CENTRE of colour bin i.
+    """Limits that place integer value i at the CENTER of color bin i.
 
     Using (0, n-1) would land values on bin boundaries, where rounding decides
-    the colour.
+    the color.
     """
     return (-0.5, n - 0.5)
 

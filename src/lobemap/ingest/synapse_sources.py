@@ -53,7 +53,7 @@ def neuprint_presynapses(
     progress=None,
     max_retries: int = 3,
 ) -> Iterator[np.ndarray]:
-    """Yield (N, 3) presynapse positions in micrometres, slab by slab.
+    """Yield (N, 3) presynapse positions in micrometers, slab by slab.
 
     `lo_um`/`hi_um` bound the region and are supplied by the caller, never
     queried -- see the note above. A slab that times out is split and retried,
@@ -97,10 +97,10 @@ def neuprint_presynapses(
 def flywire_presynapses(
     confidence: float = 50.0, batch_size: int = 2_000_000, progress=None
 ) -> Iterator[np.ndarray]:
-    """Yield (N, 3) FlyWire presynapse positions in micrometres.
+    """Yield (N, 3) FlyWire presynapse positions in micrometers.
 
     `confidence` is the published cleft-score recommendation. FlyWire
-    coordinates are 4 nm voxels; fafbseg returns them in nanometres.
+    coordinates are 4 nm voxels; fafbseg returns them in nanometers.
     """
     from fafbseg import flywire
 

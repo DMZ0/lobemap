@@ -1,7 +1,7 @@
 """Ingest meshes stored as vertex/face CSV tables.
 
 Used for the FlyWire reference glomerulus surfaces, which ship as a vertex
-table (PointNo, X, Y, Z) plus a face table already labelled per glomerulus
+table (PointNo, X, Y, Z) plus a face table already labeled per glomerulus
 (id, name, v1, v2, v3). Vertex references are 1-based.
 """
 

@@ -37,7 +37,7 @@ class ImageIngestResult:
 
 
 def read_tiff_voxel_um(path: Path) -> tuple[float, float, float] | None:
-    """(z, y, x) voxel size in micrometres from ImageJ/TIFF metadata."""
+    """(z, y, x) voxel size in micrometers from ImageJ/TIFF metadata."""
     import tifffile
 
     with tifffile.TiffFile(path) as tif:
@@ -149,7 +149,7 @@ def verify_against_labels(
     VOLUME centroid (`center_mass`). Using the surface-vertex mean instead is a
     subtly different quantity and inflates the residual.
 
-    Returns per-axis mean offsets in micrometres; near-zero means the mapping
+    Returns per-axis mean offsets in micrometers; near-zero means the mapping
     holds.
     """
     import trimesh

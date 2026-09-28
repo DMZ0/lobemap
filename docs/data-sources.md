@@ -4,8 +4,8 @@ Every atlas and reference volume the viewer can open, and where it came from.
 `registry/assets.toml` carries the same provenance per asset, machine-readable,
 and is the authority if the two ever disagree.
 
-Nothing here is redistributed under a licence of lobemap's own. Each dataset
-keeps the licence and citation requirements of its own publication. **If you use
+Nothing here is redistributed under a license of lobemap's own. Each dataset
+keeps the license and citation requirements of its own publication. **If you use
 an atlas, cite the paper it came from.**
 
 Paper PDFs are not tracked. Their links are in

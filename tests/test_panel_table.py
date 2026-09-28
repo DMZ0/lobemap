@@ -3,7 +3,7 @@
 Sorting is the risky one. Every handler used to treat the visual row as
 the compartment id -- `_set_rows`, the filter, `highlight` -- which is
 true only while the table is in insertion order. Once a header click can
-reorder it, a row number means nothing, so these check behaviour AFTER a
+reorder it, a row number means nothing, so these check behavior AFTER a
 sort rather than before.
 """
 
@@ -257,7 +257,7 @@ def test_columns_are_sized_to_their_contents(fafb_tabs):
     assert len(set(widths.values())) > 3, "columns look uniformly sized"
 
 
-def test_a_hex_colour_spec_does_not_break_filling():
+def test_a_hex_color_spec_does_not_break_filling():
     """The bug: neuropil shells are the string "#9aa0a6", and indexing a
     string gives "#", so filling one raised `could not convert string to
     float`. Only the atlases carry per-compartment arrays."""

@@ -85,7 +85,7 @@ def test_cache_key_is_stable():
 def test_check_scale_catches_a_unit_error():
     ms = meshset()
     assert G.check_scale(ms, expect_um=(4.0, 45.0)).passed
-    # The same geometry read as nanometres: 1000x too big.
+    # The same geometry read as nanometers: 1000x too big.
     blown = ms.transformed(ms.vertices * 1000.0)
     bad = G.check_scale(blown, expect_um=(4.0, 45.0))
     assert not bad.passed

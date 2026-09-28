@@ -60,7 +60,7 @@ def test_accumulator_is_additive_across_batches():
 
 def test_blur_spreads_a_point_to_the_expected_width():
     acc = StainAccumulator(np.zeros(3), 0.5, (41, 41, 41))
-    acc.add(np.array([[10.25, 10.25, 10.25]]))  # centre voxel
+    acc.add(np.array([[10.25, 10.25, 10.25]]))  # center voxel
     blurred = acc.blurred(sigma_um=0.9)
     peak = np.unravel_index(blurred.argmax(), blurred.shape)
     assert peak == (20, 20, 20)

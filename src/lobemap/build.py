@@ -166,7 +166,7 @@ def _label_volume(src, params, **_):
 def _label_masks(src, params, **_):
     """The publication's own voxel masks, unmodified.
 
-    Deliberately not a pyramid: averaging neighbouring voxels of a label
+    Deliberately not a pyramid: averaging neighboring voxels of a label
     volume gives the mean of two ids, which is a third label.
     """
     from .ingest.label_volume import masks_volume, materials_from_amira

@@ -1,7 +1,7 @@
-"""Per-layer display defaults, and colour keyed on the glomerulus.
+"""Per-layer display defaults, and color keyed on the glomerulus.
 
-Colour by file position is the failure these guard: it makes the same
-glomerulus a different colour in each atlas, which is unreadable in a viewer
+Color by file position is the failure these guard: it makes the same
+glomerulus a different color in each atlas, which is unreadable in a viewer
 built to superpose them, and nothing errors.
 """
 
@@ -26,7 +26,7 @@ def _c(name, canonical, relation="exact"):
                        canonical=tuple(canonical), relation=relation)
 
 
-def test_the_same_glomerulus_gets_the_same_colour_in_every_atlas():
+def test_the_same_glomerulus_gets_the_same_color_in_every_atlas():
     a = canonical_colors([_c("DA1", ["DA1"]), _c("DA2", ["DA2"])], ORDER)
     # A different atlas, different order, different names for the same thing.
     b = canonical_colors([_c("AL-DA2(R)", ["DA2"]), _c("AL-DA1(R)", ["DA1"])], ORDER)
@@ -35,14 +35,14 @@ def test_the_same_glomerulus_gets_the_same_colour_in_every_atlas():
     assert not np.allclose(a[0], a[1]), "distinct glomeruli must differ"
 
 
-def test_a_rename_shares_colour_with_its_canonical():
+def test_a_rename_shares_color_with_its_canonical():
     """Bates VC3l is canonical VC3; it must look like Benton's VC3."""
     old = canonical_colors([_c("VC3l", ["VC3"], "renamed")], ORDER)
     new = canonical_colors([_c("VC3", ["VC3"])], ORDER)
     assert np.allclose(old[0], new[0])
 
 
-def test_the_parts_of_a_split_share_one_colour():
+def test_the_parts_of_a_split_share_one_color():
     """VM6l/VM6m/VM6v are one glomerulus resolved three ways."""
     cols = canonical_colors(
         [_c(n, ["VM6"], "split") for n in ("VM6l", "VM6m", "VM6v")], ORDER)
@@ -55,8 +55,8 @@ def test_a_merge_takes_its_first_canonical():
     assert np.allclose(merged[0], first[0])
 
 
-def test_colour_does_not_depend_on_how_many_compartments_an_atlas_has():
-    """Adding an atlas must never recolour an existing one."""
+def test_color_does_not_depend_on_how_many_compartments_an_atlas_has():
+    """Adding an atlas must never recolor an existing one."""
     one = canonical_colors([_c("VM6", ["VM6"])], ORDER)
     many = canonical_colors([_c(n, [n]) for n in ORDER], ORDER)
     assert np.allclose(one[0], many[ORDER.index("VM6")])
@@ -73,7 +73,7 @@ def test_empty_vocabulary_does_not_divide_by_zero():
     assert cols.shape == (1, 4)
 
 
-def test_categorical_colours_are_still_distinct():
+def test_categorical_colors_are_still_distinct():
     cols = categorical_colors(58)
     assert len({tuple(np.round(c, 3)) for c in cols}) == 58
 
@@ -99,7 +99,7 @@ def test_a_role_override_does_not_lose_the_base_defaults():
 def test_an_asset_colormap_wins_over_the_role():
     spec = display_for("virtual_stain", colormap="cyan")
     assert spec["colormap"] == "cyan"
-    assert spec["gamma"] == 0.7, "overriding colour must not drop gamma"
+    assert spec["gamma"] == 0.7, "overriding color must not drop gamma"
 
 
 def test_napari_accepts_every_default_we_pass():

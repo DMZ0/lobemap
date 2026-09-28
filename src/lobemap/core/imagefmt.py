@@ -1,9 +1,9 @@
 """Canonical image container.
 
-The mesh side of this project keeps every vertex in micrometres; images must
+The mesh side of this project keeps every vertex in micrometers; images must
 agree, or a stain lands next to the anatomy rather than on it. So a Volume
 carries its voxel size and the world position of its first voxel, both in
-micrometres, and nothing downstream is allowed to guess either.
+micrometers, and nothing downstream is allowed to guess either.
 
 Axis order is the other half of the same problem. Mesh vertices are stored as
 columns (c0, c1, c2) in the source's own order; a Volume's array axes must use
@@ -78,7 +78,7 @@ class Volume:
         return np.rint(rel).astype(np.int64)
 
     def sample(self, points_um: np.ndarray, outside=0.0) -> np.ndarray:
-        """Nearest-neighbour sample; points outside the volume give `outside`."""
+        """Nearest-neighbor sample; points outside the volume give `outside`."""
         idx = self.world_to_index(points_um)
         ok = np.all((idx >= 0) & (idx < np.asarray(self.shape)), axis=1)
         out = np.full(len(idx), outside, dtype=float)
@@ -94,7 +94,7 @@ class Volume:
     def napari_data(self):
         """What to hand napari: lazy arrays, pyramid if there is one.
 
-        **The laziness is not an optimisation, it is required.** napari slices
+        **The laziness is not an optimization, it is required.** napari slices
         a 2D view with `data[disp_slice]`, and `disp_slice` constrains only the
         *displayed* axes -- the slider axis stays `slice(None)`. On an eager
         array that expression materialises the entire level before one plane
@@ -109,7 +109,7 @@ class Volume:
     # -- napari ----------------------------------------------------------
 
     def napari_kwargs(self) -> dict:
-        """scale/translate that place this volume in micrometre world space.
+        """scale/translate that place this volume in micrometer world space.
 
         napari's translate is the position of voxel (0, 0, 0), which is exactly
         what `origin_um` means here.

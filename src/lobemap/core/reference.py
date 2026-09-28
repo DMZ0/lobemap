@@ -101,7 +101,7 @@ def _expand(chunk: str, sep: str) -> list[str]:
 
 
 def terms(value: str, *, split_commas: bool = True) -> list[str]:
-    """The distinct terms in one reference cell, normalised and sorted."""
+    """The distinct terms in one reference cell, normalized and sorted."""
     if value is None or value.strip().lower() in _EMPTY:
         return []
     text, extra = _pull_parentheticals(value)
@@ -128,7 +128,7 @@ def terms(value: str, *, split_commas: bool = True) -> list[str]:
     return sorted(kept, key=str.lower)
 
 
-def normalise(value: str, *, split_commas: bool = True) -> str:
+def normalize(value: str, *, split_commas: bool = True) -> str:
     return "; ".join(terms(value, split_commas=split_commas))
 
 
@@ -137,7 +137,7 @@ def default_path(registry_root) -> Path:
 
 
 def load(registry_root) -> dict[str, dict[str, str]]:
-    """Glomerulus name -> {panel column: normalised value}.
+    """Glomerulus name -> {panel column: normalized value}.
 
     Keyed on the name as the table spells it AND on a lowercase form, so an
     atlas naming a glomerulus `DL3` or `dl3` finds the same row. Missing
@@ -153,7 +153,7 @@ def load(registry_root) -> dict[str, dict[str, str]]:
             if not name:
                 continue
             props = {
-                label: normalise(row.get(src, ""), split_commas=commas)
+                label: normalize(row.get(src, ""), split_commas=commas)
                 for label, (src, commas) in FIELDS.items()
             }
             out[name] = props
@@ -161,4 +161,4 @@ def load(registry_root) -> dict[str, dict[str, str]]:
     return out
 
 
-__all__ = ["FIELDS", "KEY", "default_path", "load", "normalise", "terms"]
+__all__ = ["FIELDS", "KEY", "default_path", "load", "normalize", "terms"]

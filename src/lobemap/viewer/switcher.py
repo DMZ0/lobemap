@@ -3,7 +3,7 @@
 Rebuilding in place rather than relaunching is the whole point: the process,
 the Qt window and the GPU context survive, so a switch costs only the data.
 Tearing the window down and putting a new one up would also lose the
-maximised geometry and put a fresh window wherever the window manager felt
+maximized geometry and put a fresh window wherever the window manager felt
 like, which for a viewer whose default view is carefully fitted is a
 regression, not a neutral implementation detail.
 

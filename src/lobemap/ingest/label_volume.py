@@ -60,20 +60,20 @@ def parse_material(name: str) -> tuple[str, str | None] | None:
 #: smoothing the mesh afterwards only reached 17%, since by then the steps
 #: are vertices.
 #:
-#: Sigma is in MICROMETRES, so the anisotropy is handled: ~3 voxels in x and y
+#: Sigma is in MICROMETERS, so the anisotropy is handled: ~3 voxels in x and y
 #: against 1 in z, which is what the step sizes call for.
 #:
 #: It is chosen for smoothness ALONE. Disjointness is guaranteed structurally
 #: by `_rival_field` and volume is corrected by `DEFAULT_LEVEL`, so none of
 #: the three is traded against the others -- picking sigma small enough to
-#: keep neighbours apart would undersmooth for a reason unrelated to
+#: keep neighbors apart would undersmooth for a reason unrelated to
 #: smoothing.
 DEFAULT_MASK_SIGMA_UM = 1.0
 
 #: Background isolevel. Blurring shrinks a convex surface -- roughly
 #: sigma^2/R, so hardest on the small glomeruli -- and 0.5 loses 7.2% of the
 #: volume. 0.44 was measured to restore it, to -0.4% on average. Lowering it
-#: cannot make neighbours collide: a shared boundary is set by the midpoint
+#: cannot make neighbors collide: a shared boundary is set by the midpoint
 #: rule and never by this level.
 DEFAULT_LEVEL = 0.44
 
@@ -96,8 +96,8 @@ def materials_from_amira(header_path, id_offset: int = -1) -> dict[int, str]:
     materials from 1 with `Exterior` as Id 1, but its TIFF export writes
     background as 0: in the Grabe volume, value 0 holds 28.98 M of 31.38 M
     voxels while `Exterior` carries Id 1. Taking the Ids at face value shifts
-    every glomerulus onto its neighbour's label, which is not a crash but a
-    silent mislabelling -- it moved four glomeruli in and two out, and dropped
+    every glomerulus onto its neighbor's label, which is not a crash but a
+    silent mislabeling -- it moved four glomeruli in and two out, and dropped
     the mean positional-nomenclature coherence from 0.81 to 0.74. `ingest`
     now checks the modal value is unclaimed, which catches a wrong offset.
     """
@@ -129,7 +129,7 @@ def label_names(materials: dict[int, str]) -> dict[int, str]:
 
     The Amira header maps a voxel value to a RAW material name
     (`DA1_left`); a MeshSet carries the PARSED, sided name (`DA1(L)`). The
-    viewer needs to join the two -- to colour a voxel mask the same as its
+    viewer needs to join the two -- to color a voxel mask the same as its
     mesh -- and neither container held the correspondence, so it had to be
     re-derived from the `.am` file, which does not ship.
 
@@ -159,11 +159,11 @@ def masks_volume(label_path, materials: dict[int, str],
     means the smoothing can always be checked against its input.
 
     It is stored as npz rather than zarr on purpose: a multiscale pyramid
-    averages neighbouring voxels, and the mean of two label ids is a third
+    averages neighboring voxels, and the mean of two label ids is a third
     label -- a plausible-looking glomerulus that does not exist.
 
     The value -> name map travels in the metadata. Without it the viewer
-    cannot colour a mask the same as its mesh, and the correspondence lives
+    cannot color a mask the same as its mesh, and the correspondence lives
     only in the Amira header, which does not ship.
     """
     import tifffile
@@ -263,7 +263,7 @@ def _rival_field(labels, values, spacing, sigma_um, pad):
 
     This is what keeps the smoothed glomeruli DISJOINT without constraining
     sigma. Surfacing each blurred mask alone and thresholding expands every
-    region outward, so neighbours that were touching interpenetrate -- at a
+    region outward, so neighbors that were touching interpenetrate -- at a
     level of 0.46, 158 voxels landed inside two glomeruli at once (VC3/VP2,
     VA1d/VA1v, DM1/DM4 among them).
 
@@ -465,7 +465,7 @@ def ingest(
             ),
             "mask_sigma_um": mask_sigma_um,
             "level": level,
-            "boundary": "midpoint between neighbouring blurred labels",
+            "boundary": "midpoint between neighboring blurred labels",
             "disjoint_verified": True,
             "smooth_iterations": smooth,
             "max_smoothing_volume_change_pct": (

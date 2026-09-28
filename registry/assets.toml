@@ -115,7 +115,7 @@ license = "CC BY 4.0"
 # The publication's own voxel-wise masks, unmodified -- the thing the meshes
 # in grabe2015_glomeruli are surfaced from, kept so the smoothing can always
 # be checked against its input. Stored as npz rather than zarr on purpose: a
-# multiscale pyramid averages neighbouring voxels, and the mean of two label
+# multiscale pyramid averages neighboring voxels, and the mean of two label
 # ids is a third label.
 [grabe2015_labels]
 role = "glomeruli"
@@ -132,7 +132,7 @@ space = "GRABE"
 kind = "image"
 side = "both"
 path = "data/grabe2015_stack.npz"
-# Grey like the stains, and for the same reason: it sits under the
+# Gray like the stains, and for the same reason: it sits under the
 # glomerulus meshes. Only gamma and attenuation are worth overriding.
 display = { colormap = "gray", gamma = 0.7, attenuation = 0.1 }
 [grabe2015_stack.source]
@@ -203,7 +203,7 @@ doi = "10.1038/s41586-024-07558-y"
 
 # Cropped to brain: the VNC is excluded by the grid bounds, which drop
 # 10,418,893 of 45,656,140 presynapses. The boundary is unambiguous --
-# brain-labelled presynapses span z 101-328 um and VNC-labelled ones
+# brain-labeled presynapses span z 101-328 um and VNC-labeled ones
 # 539-1049 um, a 210 um gap.
 [malecns_stain]
 role = "virtual_stain"

@@ -21,7 +21,7 @@ import numpy as np
 from ..core.meshfmt import MeshSet
 from ..core.meshrepair import RepairReport, repair_meshset
 
-#: Plausible size of one glomerulus, in micrometres.
+#: Plausible size of one glomerulus, in micrometers.
 COMPARTMENT_EXTENT_UM = (4.0, 45.0)
 UNIT_CANDIDATES = [(1e-3, "nm"), (1.0, "um")]
 
@@ -95,7 +95,7 @@ def ingest(
         # the first hyphen is the glomerulus. Segment_ID looks cleaner but
         # carries 3D Slicer's uniquifying suffix -- Benton's VP1m arrives as
         # Segment_ID "VP1m_1", which would fabricate a glomerulus that the
-        # dataset's own colour table calls plain "VP1m".
+        # dataset's own color table calls plain "VP1m".
         seg_name = _field(block, "Segment_Name")
         seg_id = _field(block, "Segment_ID")
         if seg_name:

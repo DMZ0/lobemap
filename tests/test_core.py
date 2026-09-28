@@ -10,7 +10,7 @@ import numpy as np
 import pytest
 
 from lobemap.core.meshfmt import MeshSet
-from lobemap.core.names import Nomenclature, normalise, parse_roi
+from lobemap.core.names import Nomenclature, normalize, parse_roi
 from lobemap.core.registry import Registry, RegistryError
 
 
@@ -117,9 +117,9 @@ def test_parse_roi(roi, expect):
     assert parse_roi(roi) == expect
 
 
-def test_normalise():
-    assert normalise("VA1v") == normalise("va1v") == "VA1V"
-    assert normalise("DL2 d") == normalise("DL2_d") == "DL2D"
+def test_normalize():
+    assert normalize("VA1v") == normalize("va1v") == "VA1V"
+    assert normalize("DL2 d") == normalize("DL2_d") == "DL2D"
 
 
 def test_add_missing_and_resolve():

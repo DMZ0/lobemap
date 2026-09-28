@@ -16,7 +16,7 @@ from dataclasses import dataclass
 import numpy as np
 
 from ..core.meshfmt import MeshSet
-from ..core.names import normalise, parse_roi
+from ..core.names import normalize, parse_roi
 
 
 @dataclass
@@ -44,7 +44,7 @@ def reconcile(
     A match must be mutually nearest, within `max_distance_um`, AND
     unambiguous: the nearest candidate must be closer than
     `ambiguity_ratio` x the second-nearest. Without that last test the method
-    is only safe when the two atlases share geometry. Neighbouring glomeruli
+    is only safe when the two atlases share geometry. Neighboring glomeruli
     sit ~10 um apart, so for atlases from different animals -- where
     corresponding glomeruli are already 6-8 um apart after bridging -- plain
     nearest-centroid matching confidently pairs the wrong structures and
@@ -79,7 +79,7 @@ def reconcile(
                 a.names[i],
                 b.names[j],
                 float(d[i, j]),
-                normalise(name_a) == normalise(name_b),
+                normalize(name_a) == normalize(name_b),
             )
         )
         used_b.add(j)

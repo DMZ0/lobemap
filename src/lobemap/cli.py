@@ -791,7 +791,7 @@ def cmd_nomenclature(args) -> int:
         Nomenclature,
         audit_atlas,
         clean_reference_name,
-        normalise,
+        normalize,
         parse_roi,
     )
     from .core.registry import Registry
@@ -875,7 +875,7 @@ def cmd_nomenclature(args) -> int:
         result = nom.cross_check(ref)
         print()
         print(f"cross-check against {Path(args.cross_check).name} "
-              f"[{args.column}]: {len({normalise(r) for r in ref})} names")
+              f"[{args.column}]: {len({normalize(r) for r in ref})} names")
         if result["only_reference"]:
             print(f"  in reference but in NO atlas "
                   f"({len(result['only_reference'])}): "

@@ -147,7 +147,7 @@ def anatomical_triad(space):
 
     Two earlier objectives were worse. Nearest-to-its-own-axis put the
     two triads almost on top of each other. Furthest-from-its-own-axis
-    maximised a SUM, so it bought two near-reversals by leaving a third
+    maximized a SUM, so it bought two near-reversals by leaving a third
     arrow 17 degrees from its counterpart -- and neither looked at the
     other two world arrows at all.
 
@@ -217,7 +217,7 @@ def flip_side(side):
 #:   absent   no correspondence
 Relation = Literal["exact", "split", "merge", "renamed", "absent"]
 
-#: Conversion into the internal working unit (micrometres).
+#: Conversion into the internal working unit (micrometers).
 TO_UM: Mapping[str, float] = {"nm": 1e-3, "um": 1.0}
 
 
@@ -322,7 +322,7 @@ class Asset:
     colormap: str | None = None
     #: Any other napari image-layer keywords, overriding the role's defaults.
     #: Grabe's confocal channel is a `template_image` -- it is real microscopy,
-    #: not a synthesised stain, and relabelling its role to get the look would
+    #: not a synthesised stain, and relabeling its role to get the look would
     #: be a lie about provenance -- but it should still be displayed like the
     #: stains, so it carries the override rather than the wrong role.
     display: Mapping[str, Any] = field(default_factory=dict)

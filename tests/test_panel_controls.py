@@ -66,14 +66,14 @@ def test_label_all_then_none_round_trips(registry):
         assert overlay is not None, "the tab has no contour overlay bound"
 
         buttons["Label all"].click()
-        assert overlay.labels, "Label all labelled nothing"
-        labelled = set(overlay.labels)
+        assert overlay.labels, "Label all labeled nothing"
+        labeled = set(overlay.labels)
 
         buttons["Label none"].click()
         assert not overlay.labels, "Label none left labels behind"
 
         buttons["Label all"].click()
-        assert set(overlay.labels) == labelled, "not reproducible"
+        assert set(overlay.labels) == labeled, "not reproducible"
     finally:
         viewer.close()
 

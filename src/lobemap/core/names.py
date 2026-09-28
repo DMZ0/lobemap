@@ -60,7 +60,7 @@ def clean_reference_name(value: str) -> str:
     return _ANNOTATION_RE.sub("", value.strip()).strip()
 
 
-def normalise(name: str) -> str:
+def normalize(name: str) -> str:
     """Canonical comparison key: case- and separator-insensitive."""
     return re.sub(r"[\s_\-]+", "", name).upper()
 
@@ -121,7 +121,7 @@ class Nomenclature:
         correspondences: list[Correspondence] | None = None,
     ) -> None:
         self.canonical: list[str] = list(canonical or [])
-        self._by_norm = {normalise(c): c for c in self.canonical}
+        self._by_norm = {normalize(c): c for c in self.canonical}
         self._corr: dict[str, list[Correspondence]] = defaultdict(list)
         for c in correspondences or []:
             self._corr[c.atlas].append(c)
@@ -133,7 +133,7 @@ class Nomenclature:
             if c.published_name == published_name:
                 return c
         # Fall back to an identity match against the canonical set.
-        hit = self._by_norm.get(normalise(published_name))
+        hit = self._by_norm.get(normalize(published_name))
         if hit is not None:
             return Correspondence(atlas, published_name, (hit,), "exact")
         return None
@@ -145,7 +145,7 @@ class Nomenclature:
         return list(self._corr.get(atlas, ()))
 
     def is_canonical(self, name: str) -> bool:
-        return normalise(name) in self._by_norm
+        return normalize(name) in self._by_norm
 
     # -- derivation ------------------------------------------------------
 
@@ -164,7 +164,7 @@ class Nomenclature:
             if name in recorded:
                 continue
             glom, _side = parse_roi(name)
-            key = normalise(glom)
+            key = normalize(glom)
             if key not in self._by_norm:
                 self._by_norm[key] = glom
                 self.canonical.append(glom)
@@ -191,7 +191,7 @@ class Nomenclature:
         Returns {'only_here': [...], 'only_reference': [...]}. Per the plan,
         disagreements are findings to resolve, never silently overwritten.
         """
-        ref = {normalise(n): n for n in reference_names}
+        ref = {normalize(n): n for n in reference_names}
         only_here = [self._by_norm[k] for k in self._by_norm if k not in ref]
         only_ref = [ref[k] for k in ref if k not in self._by_norm]
         return {

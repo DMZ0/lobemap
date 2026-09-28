@@ -53,13 +53,13 @@ def test_every_declared_level_is_reachable_by_the_reducer(tmp_path):
             assert b == tuple(n // s for n, s in zip(a, step))
 
 
-def test_level_transform_keeps_voxel_centres_aligned():
+def test_level_transform_keeps_voxel_centers_aligned():
     voxel, origin = (0.25, 0.25, 0.25), (10.0, 20.0, 30.0)
     for level in range(5):
         span = 2 ** level
         scale, translation = zf.level_transform((span,) * 3, voxel, origin)
         assert scale == pytest.approx([0.25 * span] * 3)
-        # Level L voxel 0 spans original voxels 0..2^L-1, so its centre sits
+        # Level L voxel 0 spans original voxels 0..2^L-1, so its center sits
         # at the midpoint of that span -- not at the origin.
         assert translation[0] == pytest.approx(10.0 + 0.25 * (span - 1) / 2)
     assert zf.level_transform((1, 1, 1), voxel, origin)[1] == pytest.approx(list(origin))

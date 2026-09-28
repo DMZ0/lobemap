@@ -24,7 +24,7 @@ import numpy as np
 
 from ..core.meshfmt import MeshSet
 
-#: FlyWire volumes are served in nanometres.
+#: FlyWire volumes are served in nanometers.
 SOURCE_SCALE_TO_UM = 1e-3
 
 
@@ -47,7 +47,7 @@ def ingest(
     repair: bool = True,
     progress=None,
 ) -> NeuropilIngestResult:
-    """Fetch neuropil meshes and return them as a MeshSet in micrometres.
+    """Fetch neuropil meshes and return them as a MeshSet in micrometers.
 
     `names=None` takes all of them. The result is still in FlyWire space;
     bridging is a separate step so the fetch can be cached and re-bridged

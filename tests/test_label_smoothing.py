@@ -1,4 +1,4 @@
-"""Smoothing a label volume without letting neighbours collide.
+"""Smoothing a label volume without letting neighbors collide.
 
 Three properties that pull against each other, kept independent: sigma sets
 smoothness, the midpoint rule keeps regions disjoint, and the level corrects
@@ -131,7 +131,7 @@ def test_the_shipped_grabe_meshes_are_disjoint():
     assert meta.get("disjoint_verified") is True
     assert meta.get("mask_sigma_um", 0) > 0
 
-    # Spot-check the geometry rather than trusting the flag: neighbouring
+    # Spot-check the geometry rather than trusting the flag: neighboring
     # glomeruli should have bounding boxes that touch but centroids apart.
     boxes = []
     for i in range(ms.n_compartments):

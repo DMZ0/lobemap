@@ -151,7 +151,7 @@ def test_a_space_without_a_rotation_gets_no_frame():
     """Built here rather than taken from the registry.
 
     This used to borrow JRC2018U, which declared no axes because nothing
-    was ever shown in it. That space has been removed, and the behaviour
+    was ever shown in it. That space has been removed, and the behavior
     under test is about a Space with no rotation rather than about
     any particular one.
     """
@@ -212,7 +212,7 @@ def test_no_anatomical_arrow_lands_near_a_world_arrow(registry):
     The world arrows are the POSITIVE axes only -- napari draws each
     along increasing index and cannot reverse one -- which is why the
     sign of each pole is worth choosing. Against plus-and-minus axes
-    the nearest distance would be fixed by the anatomy and no labelling
+    the nearest distance would be fixed by the anatomy and no labeling
     could improve it.
     """
     import numpy as np
@@ -227,7 +227,7 @@ def test_no_anatomical_arrow_lands_near_a_world_arrow(registry):
         assert min(nearest) > 45.0, (space_id, np.round(nearest, 1))
 
 
-def test_the_triad_maximises_that_separation(registry):
+def test_the_triad_maximizes_that_separation(registry):
     """Checked against brute force over all 48 signed permutations: the
     chosen one must be a right-handed candidate whose closest approach
     to a world arrow is as far off as any candidate achieves."""
@@ -393,7 +393,7 @@ def test_labels_are_refused_rather_than_truncated(registry):
 #
 # Measured against Benton, the hemibrain and the male CNS, both lobes of
 # each, GRABE's anterior and dorsal sit ~49 deg off its array axes. The
-# overlay draws one arrow per ARRAY axis, so labelling them cannot say
+# overlay draws one arrow per ARRAY axis, so labeling them cannot say
 # that: the label would name a pole its own arrow never reaches. napari's
 # own visual is rotated instead, which keeps the indicator identical to
 # the one the other three spaces show and moves only where it points.
@@ -489,7 +489,7 @@ def test_the_anatomy_gets_a_second_triad_shown_only_in_3d(registry):
         assert node.visible is True
         assert node.parent is overlay.node.scene, "not in napari's own view box"
 
-        # napari's own is untouched: not turned, not recoloured
+        # napari's own is untouched: not turned, not recolored
         assert getattr(overlay.node.axes.transform, "matrix", None) is None
 
         # the second one carries the anatomy

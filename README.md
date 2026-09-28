@@ -72,7 +72,7 @@ installed package, so the commands work from any directory.
 
 | space | atlas | glomeruli |
 |---|---|---|
-| FAFB14 | [Benton 2025](https://doi.org/10.1038/s44319-025-00476-8) (Dataset EV2) | 58 |
+| FAFB14 (FlyWire) | [Benton 2025](https://doi.org/10.1038/s44319-025-00476-8) (Dataset EV2) | 58 |
 | JRCFIB2018F (hemibrain) | neuPrint [hemibrain](https://doi.org/10.7554/eLife.57443) | 58 + 19 |
 | JRCFIB2018F | [Schlegel 2021](https://doi.org/10.7554/eLife.66018) S11, from receptor neurons | 59 |
 | JRCFIB2018F | [Schlegel 2021](https://doi.org/10.7554/eLife.66018) S12, from projection neurons | 58 |
@@ -182,21 +182,3 @@ one the current mode cannot draw is simply switched off.
 ## Documentation
 
 - [docs/data-sources.md](docs/data-sources.md) — where each dataset came from
-
-## Lineage
-
-This is a fork of [lobemap](https://github.com/gumadeiras/lobemap) by
-Gustavo Madeira Santana. The viewer has been rewritten around coordinate
-spaces, and the ingest, registry and validation are new, but the curated
-nomenclature tables and the published source data under `registry/sources/`
-come from the original and remain its work.
-
-## License
-
-MIT, inherited from the original — see [LICENSE](LICENSE).
-
-The datasets are not covered by it. Each retains the license and citation
-requirements of its own publication, recorded per asset in
-`registry/assets.toml` and in
-[docs/data-sources.md](docs/data-sources.md). If you use an atlas, cite the
-paper it came from.
