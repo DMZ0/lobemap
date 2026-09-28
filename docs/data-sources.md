@@ -16,14 +16,14 @@ Paper PDFs are not tracked. Their links are in
 Four coordinate spaces, six atlases. A space also carries its brain neuropils
 and one reference image.
 
-| space | atlas | compartments | source |
+| space | atlas | glomeruli | source |
 |---|---|---|---|
 | FAFB14 | Benton 2025 | 58 | Dataset EV2, ships in `registry/sources/` |
-| JRCFIB2018F | neuPrint hemibrain | 77 | neuPrint `hemibrain:v1.2.1` |
-| | Schlegel 2021 S11 | 59 | eLife supplementary file 11 |
-| | Schlegel 2021 S12 | 58 | eLife supplementary file 12 |
-| JRCFIB2022M | neuPrint male CNS | 116 | neuPrint `male-cns:v1.0` |
-| GRABE | Grabe 2015 | 108 | Amira label volume, ships in `registry/sources/` |
+| JRCFIB2018F | neuPrint hemibrain | 58 + 19 | neuPrint `hemibrain:v1.2.1` |
+| JRCFIB2018F | Schlegel 2021 S11 | 59 | eLife supplementary file 11 |
+| JRCFIB2018F | Schlegel 2021 S12 | 58 | eLife supplementary file 12 |
+| JRCFIB2022M | neuPrint male CNS | 58 + 58 | neuPrint `male-cns:v1.0` |
+| GRABE | Grabe 2015 | 54 + 54 | Amira label volume, ships in `registry/sources/` |
 
 ## Benton 2025 — FAFB14
 
@@ -58,8 +58,14 @@ Queried live through `neuprint-python`, so nothing is tracked. Needs
 neuropil set come from the ROI hierarchy; see `registry/data/README.md` for the
 exact commands.
 
-- hemibrain: https://neuprint.janelia.org — Scheffer LK, et al. *eLife*, 2020.
-  doi:10.7554/eLife.57443 (CC BY 4.0)
+The dataset version is pinned in `registry/recipes.toml` for every query,
+not left to the server's default, because the annotations differ between
+versions: `male-cns:v0.9` exposes only `AL(L)`/`AL(R)` with no glomerular
+subdivisions at all, so building against it silently yields two ROIs
+instead of 116.
+
+- hemibrain: https://neuprint.janelia.org — `hemibrain:v1.2.1`;
+  Scheffer LK, et al. *eLife*, 2020. doi:10.7554/eLife.57443 (CC BY 4.0)
 - male CNS: https://neuprint-cns.janelia.org — `male-cns:v1.0`;
   Berg S, et al. *Cell*, 2026. doi:10.1016/j.cell.2026.08.015
 

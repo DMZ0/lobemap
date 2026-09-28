@@ -66,8 +66,8 @@ kind = "meshset"
 side = "both"
 path = "data/grabe2015_glomeruli.npz"
 [grabe2015_glomeruli.source]
-doi = "10.1016/j.cub.2015.07.036"
-url = "https://doi.org/10.1016/j.cub.2015.07.036"
+doi = "10.1002/cne.23697"
+url = "https://doi.org/10.1002/cne.23697"
 
 # NOTE ON LATERALITY: these are delivered in JRCFIB2018Fraw -- hemibrain
 # coordinates -- and hemibrain is NOT left-right inverted (see the asymmetric
@@ -124,7 +124,7 @@ kind = "labels"
 side = "both"
 path = "data/grabe2015_labels.npz"
 [grabe2015_labels.source]
-doi = "10.1016/j.cub.2015.07.036"
+doi = "10.1002/cne.23697"
 
 [grabe2015_stack]
 role = "template_image"
@@ -136,7 +136,7 @@ path = "data/grabe2015_stack.npz"
 # glomerulus meshes. Only gamma and attenuation are worth overriding.
 display = { colormap = "gray", gamma = 0.7, attenuation = 0.1 }
 [grabe2015_stack.source]
-doi = "10.1016/j.cub.2015.07.036"
+doi = "10.1002/cne.23697"
 
 # FAFB AL neuropil shells, from fafbseg.get_neuropil_volumes, which returns
 # FlyWire (FAFB14.1) space; bridged here into FAFB14, the hub.

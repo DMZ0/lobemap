@@ -1,10 +1,10 @@
 # lobemap
 
 A [napari](https://napari.org) viewer for *Drosophila* antennal lobe
-glomerular atlases.
+(AL) glomerular atlases.
 
-Several groups have published glomerular parcellations of the antennal lobe,
-each from a different volume and each using its own names. lobemap puts them
+Several groups have published glomerular parcellations of the AL, each
+from a different volume and each using its own names. lobemap puts them
 in one viewer so they can be looked at side by side: as 3D meshes, or as
 exact cross-sections on a slice through the underlying image.
 
@@ -77,7 +77,29 @@ installed package, so the commands work from any directory.
 | JRCFIB2018F | [Schlegel 2021](https://doi.org/10.7554/eLife.66018) S11, from receptor neurons | 59 |
 | JRCFIB2018F | [Schlegel 2021](https://doi.org/10.7554/eLife.66018) S12, from projection neurons | 58 |
 | JRCFIB2022M (male CNS) | neuPrint [male CNS](https://doi.org/10.1016/j.cell.2026.08.015) | 58 + 58 |
-| GRABE | [Grabe 2015](https://doi.org/10.1016/j.cub.2015.07.036) | 54 + 54 |
+| GRABE | [Grabe 2015](https://doi.org/10.1002/cne.23697) | 54 + 54 |
+
+Which one to reach for depends on what you are comparing against:
+
+- **GRABE** is the only atlas built from an intact, living brain, imaged
+  in vivo rather than dissected and fixed. Its glomerular shapes and the
+  geometry of its reference stack (`elav-nSyb::DsRed`, not nc82) are
+  therefore the closest match to in vivo imaging data. It is also the
+  oldest of the six and predates revisions to the fine structure of a few
+  glomeruli.
+- **FAFB14** (FlyWire) is a complete female brain, dissected and
+  chemically fixed. Benton 2025
+  ([based on Bates 2020](https://doi.org/10.1016/j.cub.2020.06.042))
+  annotates its left AL comprehensively and to current nomenclature; the
+  right AL is unannotated.
+- **JRCFIB2018F** (hemibrain) is a dissected, fixed female. Three
+  independent annotations cover its right AL, and one of them also
+  covers a subset of the left. The right AL is partially truncated even
+  so: some of its 58 glomeruli extend past the imaged volume.
+- **JRCFIB2022M** (male CNS) has complete, current annotations on both
+  sides. It is male rather than female, which may subtly affect the shape
+  of a few glomeruli, and is dissected and fixed like the other EM
+  volumes.
 
 Each space also carries its brain neuropils and one reference image. For
 Grabe, which is light microscopy, that is its own confocal stack. For the
@@ -87,7 +109,7 @@ nc82 antibody stain, computed natively in each volume rather than warped in
 from light microscopy.
 
 Glomerulus names are scoped to a space, so switching space may change both
-the list of glomeruli and their colours.
+the list of glomeruli and their colors.
 
 ## Data
 
@@ -131,8 +153,8 @@ stamps the date it ran — but its *content* hash is, and the build prints it.
 ## In the viewer
 
 - **3D** draws the meshes. **2D** draws exact mesh–plane contours, computed
-  by intersection rather than rasterised, so they stay sharp at any zoom.
-- Each glomerulus keeps one colour across the atlases of its space, in 3D,
+  by intersection rather than rasterized, so they stay sharp at any zoom.
+- Each glomerulus keeps one color across the atlases of its space, in 3D,
   in 2D and on its slice label.
 - The right-hand panel has a tab per atlas: a checkbox to show each
   glomerulus, and a second to write its name on the slice.
@@ -146,8 +168,8 @@ stamps the date it ran — but its *content* hash is, and the build prints it.
   turns on a layer that is off, by asset id or by role, for example
   `--show neuropil`.
 - In 3D the corner carries two axis indicators: one for the array axes,
-  labelled `x`, `y`, `z`, and one for the anatomical axes. Each
-  anatomical arrow is labelled with the pole it points at, one from each
+  labeled `x`, `y`, `z`, and one for the anatomical axes. Each
+  anatomical arrow is labeled with the pole it points at, one from each
   of `A`/`P`, `D`/`V` and `R`/`L`. The labels differ between spaces:
   which pole of each axis is picked so that no anatomical arrow overlaps
   an `x`/`y`/`z` one.
