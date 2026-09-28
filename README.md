@@ -70,14 +70,14 @@ installed package, so the commands work from any directory.
 
 ## What is included
 
-| space | atlas | compartments |
+| space | atlas | glomeruli |
 |---|---|---|
 | FAFB14 | [Benton 2025](https://doi.org/10.1038/s44319-025-00476-8) (Dataset EV2) | 58 |
-| JRCFIB2018F (hemibrain) | neuPrint [hemibrain](https://doi.org/10.7554/eLife.57443) | 77 |
+| JRCFIB2018F (hemibrain) | neuPrint [hemibrain](https://doi.org/10.7554/eLife.57443) | 58 + 19 |
 | JRCFIB2018F | [Schlegel 2021](https://doi.org/10.7554/eLife.66018) S11, from receptor neurons | 59 |
 | JRCFIB2018F | [Schlegel 2021](https://doi.org/10.7554/eLife.66018) S12, from projection neurons | 58 |
-| JRCFIB2022M (male CNS) | neuPrint [male CNS](https://doi.org/10.1016/j.cell.2026.08.015) | 116 |
-| GRABE | [Grabe 2015](https://doi.org/10.1016/j.cub.2015.07.036) | 108 |
+| JRCFIB2022M (male CNS) | neuPrint [male CNS](https://doi.org/10.1016/j.cell.2026.08.015) | 58 + 58 |
+| GRABE | [Grabe 2015](https://doi.org/10.1016/j.cub.2015.07.036) | 54 + 54 |
 
 Each space also carries its brain neuropils and one reference image. For
 Grabe, which is light microscopy, that is its own confocal stack. For the
