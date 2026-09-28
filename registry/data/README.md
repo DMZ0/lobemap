@@ -1,9 +1,8 @@
 # Ingested assets
 
-Nothing here is tracked. The artifacts are published as assets on the
-[`data-v1` release](https://github.com/DMZ0/lobemap/releases/tag/data-v1)
-and `lobemap fetch` puts them on disk, verified against
-`registry/manifest.toml`.
+Nothing here is tracked. The artifacts are published as release assets;
+`lobemap fetch` puts them on disk from the `base_url` in
+`registry/manifest.toml`, verified against the sha256 recorded there.
 
 What follows is how each one is rebuilt from its source, which is what
 `registry/recipes.toml` automates and `lobemap build` runs. Use it when

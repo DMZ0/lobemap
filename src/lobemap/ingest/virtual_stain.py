@@ -22,8 +22,8 @@ have several of and which nc82 does not do.
 Roughly 60% of detected synapses are not assigned to proofread neurons, mostly
 postsynapses on fine twigs. Starting from proofread connections would make the
 stain biased rather than merely sparser: brightest where tracing was most
-complete rather than where synapses are. Sources are the published buckets --
-see docs/findings.md section 7.
+complete rather than where synapses are. Sources are the published
+buckets; see `synapse_buckets`.
 
 **The bandwidth is an instrument constant, not a fitted parameter.** A
 data-driven bandwidth rule gives roughly n^(-1/7) in 3D, which at 10^7

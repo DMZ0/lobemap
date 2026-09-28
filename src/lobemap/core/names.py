@@ -1,6 +1,6 @@
 """Nomenclature and cross-atlas correspondence.
 
-Per docs/design.md section 2 this is the load-bearing component: superimposing
+This is the load-bearing component: superimposing
 atlases is meaningless without an assertion that this VA1v is that VA1v, and the
 atlases genuinely disagree on nomenclature.
 

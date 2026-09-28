@@ -1,6 +1,6 @@
 [project]
 name = "lobemap"
-version = "0.2.0.dev0"
+version = "0.2.0"
 description = "napari viewer for Drosophila antennal lobe glomerular atlases across coordinate spaces"
 readme = "README.md"
 # MIT, and the copyright in LICENSE is Gustavo Madeira Santana's. Both
@@ -35,7 +35,7 @@ classifiers = [
   "Framework :: napari",
 ]
 
-# Runtime only. Per docs/design.md §8, the data-access stack (navis, flybrains,
+# Runtime only. The data-access stack (navis, flybrains,
 # fafbseg, neuprint-python) is deliberately NOT here: the viewer must open a
 # scene from the canonical mesh format and the registry alone, with no network
 # access, no neuPrint token, and no CMTK.
@@ -56,6 +56,11 @@ dependencies = [
   "pymeshfix>=0.17",    # MeshFix: watertight repair where fill_holes cannot cope
   "py7zr>=0.21",        # Grabe 2015 ships its glomerulus OBJs in a .7z archive
 ]
+
+[project.urls]
+Homepage = "https://github.com/gumadeiras/lobemap"
+Source = "https://github.com/gumadeiras/lobemap"
+Changelog = "https://github.com/gumadeiras/lobemap/blob/main/CHANGELOG.md"
 
 [dependency-groups]
 # Ingest and cache-rebuild time only.

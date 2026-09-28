@@ -4,7 +4,7 @@ The correctness core. Everything here is invisible when it works and produces
 confident, wrong pictures when it doesn't, which is why the validation harness
 in lobemap.validate lands alongside it.
 
-Two rules, both from measurement (docs/design.md section 3):
+Two rules, both from measurement:
 
 1. **Mirror before bridge.** navis.mirror_brain succeeds on every template,
    falling back to a bounding-box reflection where no registration exists. For

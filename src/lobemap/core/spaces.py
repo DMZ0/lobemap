@@ -1,6 +1,6 @@
 """Adapter over navis-flybrains.
 
-flybrains and navis are ingest-time dependencies (docs/design.md section 8), so
+flybrains and navis are ingest-time dependencies, not runtime ones, so
 they are imported lazily: opening a scene must work without them.
 
 Routing policy, from the measurements in design section 3: take navis's route.

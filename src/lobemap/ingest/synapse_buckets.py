@@ -3,7 +3,8 @@
 These are the sources for the virtual stain. neuPrint is not: roughly 60% of
 detected synapses are not assigned to proofread neurons, mostly postsynapses
 on fine twigs, so anything reached through neuron criteria is biased toward
-well-traced regions rather than merely sparser. See docs/findings.md section 7.
+well-traced regions rather than merely sparser. Measured, not assumed:
+the bucket and neuPrint counts differ by that margin in every dataset.
 
 Three sources, three shapes:
 

@@ -3,7 +3,7 @@
 Covers hemibrain and male CNS, which share the `AL-DA1(R)` naming
 convention. The `AL-` qualifier is dropped on the way in; see
 `compartment_name`.
-Verified 2026-09-20 (see docs/probes/): male-cns:v1.0 has 58 glomeruli per side,
+Verified 2026-09-20: male-cns:v1.0 has 58 glomeruli per side,
 complete and symmetric; male-cns:v0.9 has none, so the version must be pinned.
 hemibrain:v1.2.1 has 58 right / 19 left, plus one side-less `AL-DC3`.
 

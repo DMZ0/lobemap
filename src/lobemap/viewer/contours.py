@@ -1,6 +1,6 @@
 """Slice contours: exact mesh-plane intersections drawn as napari Shapes.
 
-Per docs/design.md section 1 this is the only overlay mode in which two atlases
+This is the only overlay mode in which two atlases
 are genuinely readable together. Nested semi-transparent surfaces are
 unreadable past two; outlines are not.
 

@@ -16,14 +16,11 @@ other.
 
 ## Installing
 
-Python 3.11 or 3.12, and [uv](https://docs.astral.sh/uv/):
+Python 3.11 or 3.12, and [uv](https://docs.astral.sh/uv/). Clone this
+repository, then from its root:
 
 ```bash
-git clone https://github.com/DMZ0/lobemap
-```
-
-```bash
-cd lobemap && uv sync
+uv sync
 ```
 
 Then fetch the data, which is published separately rather than committed:
@@ -95,12 +92,11 @@ the list of glomeruli and their colours.
 ## Data
 
 None of the data is committed. All fourteen artifacts are published as
-assets on the [`data-v1`
-release](https://github.com/DMZ0/lobemap/releases/tag/data-v1) — 2.51 GB,
-of which the three virtual stains are 2.44 GB.
-`registry/manifest.toml` records the sha256 of every one, and `lobemap
-fetch` checks each download against it; a file that does not match is
-discarded rather than kept. Naming an asset fetches just that one:
+release assets — 2.51 GB, of which the three virtual stains are 2.44 GB.
+`registry/manifest.toml` records where they are fetched from and the
+sha256 of every one, and `lobemap fetch` checks each download against
+it; a file that does not match is discarded rather than kept. Naming an
+asset fetches just that one:
 
 ```bash
 uv run lobemap fetch --asset hemibrain_stain
@@ -163,10 +159,6 @@ one the current mode cannot draw is simply switched off.
 
 ## Documentation
 
-- [docs/design.md](docs/design.md) — why the viewer is organised around
-  spaces, and the data model
-- [docs/findings.md](docs/findings.md) — measurements, including the ones that
-  overturned an assumption
 - [docs/data-sources.md](docs/data-sources.md) — where each dataset came from
 
 ## Lineage

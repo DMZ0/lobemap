@@ -174,7 +174,7 @@ url = "https://github.com/navis-org/fafbseg-py"
 # Virtual neuropil stains: presynapse density at LM resolution, sigma 900 nm
 # on a 0.5 um grid (effective 912 nm after binning). Built from the published
 # bulk releases rather than neuPrint, because ~60% of detected synapses are
-# not assigned to proofread neurons -- see docs/findings.md section 7.
+# not assigned to proofread neurons, mostly postsynapses on fine twigs.
 #
 # Presynapses only: nc82 labels Bruchpilot at presynaptic active zones.
 # T-bars are deduplicated where a source lists synapse pairs, so a T-bar is

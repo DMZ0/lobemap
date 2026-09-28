@@ -1,4 +1,4 @@
-"""Core data model. See docs/design.md section 2.
+"""Core data model.
 
 Reference geometry is not a separate class -- it is an Asset with a different
 `role`. That is what keeps this small.

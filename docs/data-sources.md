@@ -47,7 +47,7 @@ https://cdn.elifesciences.org/articles/66018/elife-66018-supp12-v2.zip
 Two independent parcellations of the same volume — S11 traced from receptor
 neurons, S12 from projection neurons — which is why both are kept. Supplementary
 file 11 ships 59 meshes rather than the 60 its caption states; VM2 is absent.
-Verified against a fresh download, and recorded in `docs/findings.md`.
+Verified against a fresh download.
 
 - Schlegel P, Bates AS, et al. *eLife*, 2021. doi:10.7554/eLife.66018
 
@@ -85,7 +85,7 @@ Whole-brain neuropil meshes from the FlyWire segmentation, via
 
 These are coarse — about 394 vertices and 7 µm facets — and visibly so beside
 the neuPrint sets. Warped male CNS meshes were tried as a replacement and
-reverted: smoother, but a measurably worse fit to FAFB. `docs/findings.md` has
+reverted: smoother, but a measurably worse fit to FAFB. The project notes have
 the measurement.
 
 ## Virtual neuropil stains

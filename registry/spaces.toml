@@ -23,7 +23,8 @@
 
 # Coordinate spaces. `flybrains_template` names a navis-flybrains template;
 # omit it (or leave it empty) for an island -- a space with no bridges.
-# Measured bridging status is in docs/design.md section 3.
+# Which bridges resolve, and whether each needs an external binary, is
+# recorded per space in `notes` below.
 
 [FAFB14]
 title = "FAFB14"
@@ -109,9 +110,10 @@ flybrains_template = "JRCFIB2022M"
 #
 # Measured by bridging 20,000 neuropil-mesh vertices into JRC2018U and
 # taking the rotation of the best-fit affine by polar decomposition.
-# Anterior ends up 14.7 deg from the declared axis. BRAIN only: the male CNS neuropil
-# asset carries no VNC ROI, checked against malecns_vnc_rois.txt, and
-# JRC2018U is a brain template that VNC points would drag the fit to.
+# Anterior ends up 14.7 deg from the declared axis. BRAIN only: the male
+# CNS neuropil asset carries no VNC ROI -- it is built from the ROI
+# hierarchy's CentralBrain and Optic subtrees, so the VNC never enters --
+# and JRC2018U is a brain template that VNC points would drag the fit to.
 anatomical_rotation = { axis = [-0.703787, -0.082954, 0.705551], degrees = 168.76 }
 primary_atlas = "neuprint_cns"
 notes = """Whole CNS: 753 x 627 x 1077 um, 8 nm voxels. Brain-only work must \

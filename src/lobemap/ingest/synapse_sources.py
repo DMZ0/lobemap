@@ -2,9 +2,9 @@
 
 SUPERSEDED for stain building. neuPrint is slower (~40 s fixed overhead per
 query) and, for anything reached through neuron criteria, incomplete: ~60% of
-detected synapses are not assigned to proofread neurons. Build stains from the
-published buckets instead -- docs/findings.md section 7. This module is kept as
-a fallback and for ROI-scoped queries, where it remains convenient.
+detected synapses are not assigned to proofread neurons. Build stains from
+the published buckets instead, via `synapse_buckets`. This module is kept
+as a fallback and for ROI-scoped queries, where it remains convenient.
 
 Whole-brain queries return 10^7 rows, so nothing here fetches everything in
 one call. neuPrint is partitioned into spatial slabs along one axis; each slab
