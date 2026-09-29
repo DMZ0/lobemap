@@ -22,6 +22,8 @@
 
 ### Changed
 
+- The README flags the uneven quality of the neuPrint meshes: four of the hemibrain's 77 glomeruli and nine of the male CNS's 116 are in several pieces or enclose a tunnel, as published.
+
 - Spelling throughout the repository is American English. This renames one function, `normalise` to `normalize`, in `core.names` and `core.reference`; the published data files under `registry/sources/` keep their own wording.
 
 - Replaced the viewer with a ground-up rewrite, developed separately and
