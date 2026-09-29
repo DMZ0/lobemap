@@ -95,13 +95,14 @@ Which one to reach for depends on what you are comparing against:
 - **JRCFIB2018F** (hemibrain) is a dissected, fixed female. Three
   independent annotations cover its right AL, and one of them also
   covers a subset of the left. The right AL is partially truncated even
-  so: some of its 58 glomeruli extend past the imaged volume. Four of the
-  77 neuPrint meshes have holes or are in several pieces.
+  so: some of its 58 glomeruli extend past the imaged volume. All of the
+  hemibrain atlases have a few glomeruli with holes or multiple connected
+  components.
 - **JRCFIB2022M** (male CNS) has complete, current annotations for both
   hemispheres, though the meshes are of variable quality, with several
-  glomeruli having holes or multiple pieces. It is male rather than
-  female, which may subtly affect the shape of a few glomeruli, and is
-  dissected and fixed like the other EM volumes.
+  glomeruli having holes or multiple pieces. The JRCFIB2022M specimen is
+  male rather than female, which may subtly affect the shape of a few
+  glomeruli, and is dissected and fixed like the other EM volumes.
 
 Each space also carries its brain neuropils and one reference image. For
 Grabe, which is light microscopy, that is its own confocal stack. For the
