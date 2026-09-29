@@ -121,8 +121,16 @@ def anatomical_rotation_matrix(space):
     return np.eye(3) + np.sin(t) * K + (1.0 - np.cos(t)) * (K @ K)
 
 
-def anatomical_triad(space):
+def anatomical_triad(space, reflect_axis: int | None = None):
     """(matrix, labels) for the anatomical triad, or None.
+
+    `reflect_axis` mirrors the frame along one array axis before
+    choosing, for a viewer showing the space reflected. That flips the
+    handedness of the anatomy, so the arrangement a right-handed triad
+    can draw changes with it and one label comes back the opposite pole
+    -- R for L, most visibly. Passing it is how a mirrored view stays
+    honest about which side is which; without it the triad would name
+    the unmirrored anatomy over mirrored data.
 
     The columns are the three anatomical directions and the labels name
     the pole each one points at, so arrow k reaches the pole written on
@@ -163,6 +171,14 @@ def anatomical_triad(space):
         return None
     poles = [("A", "P"), ("D", "V"), ("R", "L")]
     vectors = [np.asarray(frame[p[0]], float) for p in poles]
+    # The reflection the view is under, which two separate things need:
+    # where each anatomical pole APPEARS, and where the world arrows it is
+    # keeping clear of now point. Identity when nothing is mirrored.
+    world = np.eye(3)
+    if reflect_axis is not None:
+        world[reflect_axis, reflect_axis] = -1.0
+        # The labels still mean the same anatomy; only the directions move.
+        vectors = [world @ v for v in vectors]
 
     best = None
     for order in itertools.permutations(range(3)):
@@ -175,12 +191,21 @@ def anatomical_triad(space):
             # over columns of the best over the three positive axes.
             # cos is decreasing in angle, so the largest component is
             # the nearest arrow and we want that as small as possible.
-            closest = max(float(np.max(M[:, k])) for k in range(3))
+            # Against the arrows AS DRAWN. napari's triad is reflected
+            # under a mirror too, so its x arrow points -x there, and
+            # measuring against +x would pick a sign set that lands on
+            # top of it -- which is exactly what it did.
+            #
+            # Arrow j points along `world @ e_j`, so a column c meets it
+            # at c . (world @ e_j) = (world @ c)[j], making the whole
+            # cosine table `world @ M`.
+            seen = world @ M
+            closest = float(np.max(seen))
             # The three permutations of a sign set always tie on
             # `closest`, so the trace is what actually settles which
             # arrow carries which axis: the assignment nearest the
             # array axes, which is also stable across edits.
-            score = (-closest, float(np.trace(M)))
+            score = (-closest, float(np.trace(seen)))
             if best is None or score > best[0]:
                 names = tuple(poles[order[k]][0 if signs[k] > 0 else 1]
                               for k in range(3))

@@ -201,8 +201,33 @@ def _anatomy_triad(overlay):
     return node
 
 
-def apply_axis_mode(viewer, space) -> str:
+def _reflection_4x4(axis: int) -> np.ndarray:
+    """A reflection along one ARRAY axis, in vispy's geometry order.
+
+    The triad is drawn in vispy x,y,z, the reverse of the array order,
+    and vispy multiplies row vectors -- so conjugate by the reversal
+    and transpose, exactly as the anatomical triad's matrix is handled
+    below. A reflection is symmetric, so the transpose is a no-op here;
+    it is written out to stay parallel with that code.
+    """
+    flip = np.eye(3)[::-1]
+    mirror = np.eye(3)
+    mirror[axis, axis] = -1.0
+    mat = np.eye(4)
+    mat[:3, :3] = (flip @ mirror @ flip).T
+    return mat
+
+
+def apply_axis_mode(viewer, space, mirror_axis: int | None = None) -> str:
     """Two triads in 3D; only napari's own in 2D. Returns what is shown.
+
+    `mirror_axis` is the array axis the scene is being displayed
+    reflected along, or None. Both triads are reflected to match, so
+    each arrow keeps pointing the way the data under it now runs -- and
+    the anatomical labels come from the reflected frame, so the lateral
+    one reads R where it read L. Leaving them alone instead would put
+    an unmirrored triad over mirrored data, which is the one failure
+    this indicator exists to prevent.
 
     napari's triad is left exactly as it comes: the ARRAY axes, x/y/z,
     cyan/magenta/yellow. The anatomy is a SECOND triad beside it, turned
@@ -222,7 +247,7 @@ def apply_axis_mode(viewer, space) -> str:
     from vispy.visuals.transforms import MatrixTransform, NullTransform
 
     three_d = getattr(viewer.dims, "ndisplay", 3) == 3
-    triad = anatomical_triad(space)
+    triad = anatomical_triad(space, reflect_axis=mirror_axis)
     show_anatomy = bool(three_d and triad is not None)
 
     if getattr(viewer.dims, "ndim", 3) == len(VOXEL_LABELS):
@@ -248,8 +273,15 @@ def apply_axis_mode(viewer, space) -> str:
 
     with contextlib.suppress(Exception):
         # napari's own, put back the way it comes in case a previous
-        # version of this turned or recolored it.
-        overlay.node.axes.transform = NullTransform()
+        # version of this turned or recolored it -- except under a
+        # mirror, where it is reflected so its x arrow runs with the
+        # displayed voxel grid rather than against it. The labels are
+        # axis NAMES and so are unaffected; it is the directions that
+        # move.
+        overlay.node.axes.transform = (
+            NullTransform() if mirror_axis is None
+            else MatrixTransform(_reflection_4x4(mirror_axis))
+        )
         overlay.node.axes._default_color = VOXEL_COLORS
         overlay._on_data_change()
 

@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+### Added
+
+- A **Mirror** checkbox beside the space picker shows the whole space reflected left-right, for display only. Every layer moves -- meshes, reference image, label volume and slice contours -- by a world-space reflection on `layer.affine`, so the data on disk is untouched and nothing downstream sees a different geometry.
+- It reflects about array axis 0, which napari names `x`, and about the mid-plane of the data rather than about zero: reflecting about the origin would also throw a space published at x 192-853 um clean off screen. `x` is the left-right axis in all four spaces -- 1.0 deg off in the hemibrain, 1.3 in the male CNS, 3.7 in FAFB14, 5.5 in GRABE -- so this is a left-right mirror, and using the array axis rather than the measured lateral direction is what keeps a 2D slice cutting the voxel grid squarely.
+- Both axis triads follow the mirror, so the anatomical one still names the side on screen. `anatomical_triad` takes a `reflect_axis`, and its sign choice is now made against the world arrows AS DRAWN: napari's `x` arrow is reflected too, and measuring against `+x` put an anatomical arrow on top of it. Minimum separation is back to the unmirrored 58.6-75.3 deg. The lateral label does not necessarily swap -- both poles are reachable among the right-handed candidates -- but each arrow always points where its own label says.
+- Known limitation: under a mirror the glomeruli still shade as though lit from inside. The surfaces are re-wound so their triangles stay outward-facing, which the tests confirm by signed volume, but that does not change the appearance, so vispy's lighting is not driven by the winding. Unresolved.
+
 ### Fixed
 
 - The virtual stains and the GRABE confocal stack render in grayscale rather than magenta. They are reference imagery under colored glomerulus meshes, and a magenta wash tinted everything drawn over it. The GRABE stack carried its own per-asset `display` override, so it needed changing in `assets.toml` too.

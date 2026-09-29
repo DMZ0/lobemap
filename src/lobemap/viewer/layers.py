@@ -187,10 +187,13 @@ class AtlasSurface:
         )
         self.compact_delay_ms = compact_delay_ms
         self._timer = None
+        #: Whether the VIEW is reflected. Only the winding depends on it;
+        #: the reflection itself is a world transform on the layer.
+        self.mirrored = False
         self._resident: list[int] = sorted(self.selection)
         v, f, vals = meshset.select(sorted(self.selection))
         self.layer = viewer.add_surface(
-            (v, f, vals),
+            (v, self._oriented(f), vals),
             name=name,
             colormap=step_colormap(self.colors, name=f"{name}-colors"),
             contrast_limits=contrast_limits_for(n),
@@ -199,6 +202,41 @@ class AtlasSurface:
             blending=blending,
         )
         self.layer.metadata["lobemap"] = {"meshset": meshset, "kind": "atlas"}
+
+    # -- orientation -----------------------------------------------------
+
+    def _oriented(self, faces):
+        """Faces wound so the triangles stay outward-facing in the view.
+
+        A mirror has determinant -1, which reverses the orientation of
+        every triangle, so reversing each one's vertex order is what
+        keeps its normal pointing out of the mesh instead of into it.
+
+        It does NOT fix the shading, which is why it was written: under
+        a mirror the glomeruli still read as lit from inside. So vispy
+        is not taking its lighting from this winding, and the cause is
+        unresolved. Kept because outward-facing triangles are correct
+        either way, and measured by the signed volume in
+        `tests/test_mirror.py` -- not by appearance, which it does not
+        change.
+
+        Applied here rather than once at the toggle because `compact`
+        re-uploads geometry straight from the MeshSet on a debounce, and
+        a flip written only to the layer would be undone by the next
+        selection change.
+        """
+        return faces[:, ::-1] if self.mirrored else faces
+
+    def set_mirrored(self, on: bool) -> None:
+        """Re-wind for a reflected view, or back again."""
+        on = bool(on)
+        if on == self.mirrored:
+            return
+        self.mirrored = on
+        if not self._resident:
+            return
+        v, f, vals = self.meshset.select(self._resident)
+        self.layer.data = (v, self._oriented(f), vals)
 
     # -- selection -------------------------------------------------------
     #
@@ -275,7 +313,7 @@ class AtlasSurface:
             self._set_visible_if_changed(False)
             return
         v, f, vals = self.meshset.select(want)
-        self.layer.data = (v, f, vals)
+        self.layer.data = (v, self._oriented(f), vals)
         self._resident = want
         self._set_visible_if_changed(True)
         self._apply_alpha()

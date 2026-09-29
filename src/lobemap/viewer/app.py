@@ -608,8 +608,77 @@ DETACH_UNUSABLE_LAYERS = False
 USE_SLICE_CONTOURS = True
 
 
+#: The array axis a mirror reflects along.
+#:
+#: napari names the axes x/y/z in array order (`viewer.axes.VOXEL_LABELS`),
+#: so this is x -- and x is the left-right axis in all four spaces, 1.0 deg
+#: off in the hemibrain, 1.3 in the male CNS, 3.7 in FAFB14 and 5.5 in
+#: GRABE. So the mirror is a left-right flip and not an arbitrary one,
+#: though it is about the ARRAY axis rather than the measured lateral
+#: direction: exactly so a 2D slice keeps cutting the voxel grid squarely.
+MIRROR_AXIS = 0
+
+
+def mirror_center(layers, axis: int = MIRROR_AXIS) -> float:
+    """Mid-point of `layers` along one axis, in world micrometers.
+
+    Reflecting about zero would be a reflection too: it would also throw
+    the scene to the far side of the origin, which for spaces published
+    at x 192-853 um means off screen. So the mid-plane of the data is
+    what it reflects about, and the scene stays where it was.
+
+    Read once while nothing is mirrored, because `extent.world` already
+    includes each layer's affine -- measuring it again with the mirror on
+    would give back the same number only by luck, and any error in it
+    doubles on the next toggle.
+    """
+    lo: list[float] = []
+    hi: list[float] = []
+    for layer in layers:
+        with contextlib.suppress(Exception):
+            extent = layer.extent.world
+            a, b = float(extent[0][axis]), float(extent[1][axis])
+            if np.isfinite(a) and np.isfinite(b):
+                lo.append(a)
+                hi.append(b)
+    if not lo:
+        return 0.0
+    return (min(lo) + max(hi)) / 2.0
+
+
+def mirror_matrix(ndim: int, center: float, axis: int = MIRROR_AXIS):
+    """The (ndim+1, ndim+1) world reflection x -> 2c - x."""
+    m = np.eye(ndim + 1)
+    m[axis, axis] = -1.0
+    m[axis, -1] = 2.0 * center
+    return m
+
+
+def apply_mirror(layers, on: bool, center: float,
+                 axis: int = MIRROR_AXIS) -> None:
+    """Reflect every layer, or put them all back.
+
+    Set on `layer.affine`, which napari applies in WORLD space after the
+    layer's own scale and translate. That is what lets one matrix serve
+    meshes in micrometers and images in voxels alike: the images keep the
+    scale and translate that place them, and the reflection composes on
+    top rather than replacing it.
+
+    Layers currently detached by the display mode are included. They are
+    the same objects when re-appended, so the affine travels with them
+    and a 2D/3D switch cannot lose the mirror.
+    """
+    for layer in layers:
+        ndim = int(getattr(layer, "ndim", 3) or 3)
+        with contextlib.suppress(Exception):
+            layer.affine = (
+                mirror_matrix(ndim, center, axis) if on else np.eye(ndim + 1)
+            )
+
+
 def install_display_mode(viewer, surfaces, contours, images=(),
-                         detach: bool | None = None, space=None) -> list[tuple]:
+                         detach: bool | None = None, space=None,
+                         mirror_axis=None) -> list[tuple]:
     """Show only what the current `ndisplay` can actually use.
 
     Returns (event, handler) pairs, so a scene switch can disconnect them;
@@ -648,7 +717,10 @@ def install_display_mode(viewer, surfaces, contours, images=(),
         # and this is already the hook that fires on a mode change and
         # is torn down with the scene.
         if space is not None:
-            apply_axis_mode(viewer, space)
+            # A callable, not a value: the mirror is toggled long after
+            # this hook is installed, and the triads have to follow it.
+            axis = mirror_axis() if callable(mirror_axis) else mirror_axis
+            apply_axis_mode(viewer, space, mirror_axis=axis)
         # Identity in 3D, or the stain transposes away from the meshes.
         want_order = (
             tuple(range(ndim)) if three_d or ndim != 3 else DIMS_ORDER_XYZ
@@ -801,6 +873,45 @@ class SceneSession:
         self.panel = None
         self.dock = None
         self.handlers: list[tuple] = []
+        #: Display-only left-right reflection. Held per session, so
+        #: switching space rebuilds unmirrored and the control re-asserts
+        #: itself rather than the state surviving invisibly.
+        self.mirrored = False
+        #: The plane it reflects about, measured once while unmirrored.
+        self.mirror_center = 0.0
+
+    def all_layers(self) -> list:
+        """Every layer this session owns, detached ones included."""
+        out = [s.layer for s in self.surfaces.values()]
+        out += [c.layer for c in self.contours.values()]
+        out += [layer for layer in self.images if layer not in out]
+        return out
+
+    def set_mirror(self, on: bool) -> None:
+        """Show the space reflected, or stop.
+
+        The triads are re-derived rather than left alone: a mirror
+        reverses handedness, so an unmirrored anatomical triad over
+        mirrored data would name the wrong side, which is the single
+        error this project has had to correct most often.
+        """
+        self.mirrored = bool(on)
+        apply_mirror(self.all_layers(), self.mirrored, self.mirror_center)
+        # The reflection reverses every triangle's orientation, so the
+        # meshes are re-wound to keep them outward-facing. This does not
+        # correct the shading; see `AtlasSurface._oriented`.
+        for surface in self.surfaces.values():
+            with contextlib.suppress(Exception):
+                surface.set_mirrored(self.mirrored)
+        space = self.registry.spaces.get(self.space)
+        if space is not None:
+            apply_axis_mode(
+                self.viewer, space,
+                mirror_axis=MIRROR_AXIS if self.mirrored else None,
+            )
+        for overlay in self.contours.values():
+            with contextlib.suppress(Exception):
+                overlay.refresh()
 
     def teardown(self) -> None:
         for event, handler in self.handlers:
@@ -875,9 +986,14 @@ def load_space(
         layer for layer in viewer.layers
         if layer.metadata.get("lobemap", {}).get("kind") in ("image", "labels")
     ]
+    # Before any mirror is applied, so the plane is the data's own.
+    session.mirror_center = mirror_center(
+        [s.layer for s in surfaces.values()] + list(session.images)
+    )
     session.handlers = install_display_mode(
         viewer, surfaces, contours, session.images,
         space=registry.spaces[space],
+        mirror_axis=lambda: MIRROR_AXIS if session.mirrored else None,
     ) or []
     enforce_display_mode = session.handlers[0][1] if session.handlers else None
 

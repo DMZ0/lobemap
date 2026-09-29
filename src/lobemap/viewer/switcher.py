@@ -15,6 +15,7 @@ from __future__ import annotations
 import contextlib
 
 from qtpy.QtWidgets import (
+    QCheckBox,
     QComboBox,
     QHBoxLayout,
     QLabel,
@@ -52,12 +53,21 @@ class SpaceSwitcher(QWidget):
             self.combo.setCurrentIndex(index)
         self.combo.currentIndexChanged.connect(self._on_change)
 
+        self.mirror = QCheckBox("Mirror")
+        self.mirror.setToolTip(
+            "Show this space reflected left-right, for display only. The "
+            "data is untouched, and both axis triads follow the mirror, so "
+            "the anatomical one still names the side you are looking at."
+        )
+        self.mirror.toggled.connect(self._on_mirror)
+
         self.status = QLabel("")
         self.status.setWordWrap(True)
 
         row = QHBoxLayout()
         row.addWidget(QLabel("Space:"))
         row.addWidget(self.combo, 1)
+        row.addWidget(self.mirror)
         outer = QVBoxLayout(self)
         outer.setContentsMargins(6, 4, 6, 4)
         outer.addLayout(row)
@@ -130,6 +140,13 @@ class SpaceSwitcher(QWidget):
             window.resizeDocks([panel, self.dock], [10_000, wanted],
                                Qt.Vertical)
 
+    def _on_mirror(self, on: bool) -> None:
+        """Reflect the loaded scene, or put it back."""
+        if self._busy:
+            return
+        with contextlib.suppress(Exception):
+            self.session.set_mirror(on)
+
     def _on_change(self, _index: int) -> None:
         want = self.combo.currentData()
         if self._busy or want is None or want == self.session.space:
@@ -142,6 +159,10 @@ class SpaceSwitcher(QWidget):
             self.status.setText(f"loading {want}...")
             self.session.teardown()
             self.session = self._load(want)
+            # A scene is built unmirrored, so the control has to re-assert
+            # itself onto the new one rather than the state being implicit.
+            if self.mirror.isChecked():
+                self.session.set_mirror(True)
             self.settle()
             self.status.setText("")
         except Exception as exc:                      # noqa: BLE001
@@ -150,6 +171,8 @@ class SpaceSwitcher(QWidget):
             self.status.setText(f"{want} failed: {exc}")
             with contextlib.suppress(Exception):
                 self.session = self._load(previous)
+                if self.mirror.isChecked():
+                    self.session.set_mirror(True)
             index = self.combo.findData(self.session.space)
             if index >= 0:
                 self.combo.setCurrentIndex(index)
