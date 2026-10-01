@@ -31,6 +31,10 @@
 
 ### Changed
 
+- Source units are read from the source instead of deduced from the result. Every mesh ingest used to recover its scale factor by trying nanometers, micrometers and 8 nm voxels in turn and keeping whichever made a glomerulus come out an anatomically plausible size -- inferring a property of the FILE from a property of the ANIMAL. neuPrint states its voxel grid in the dataset's `:Meta` node (`[8, 8, 8]` nanometers for both), and OBJ and VTP cannot carry units at all, so their recipes declare `source_units` with a note on where the declaration comes from. The plausibility range survives in `core.units.verify_extent` as a check on the declaration rather than a way of choosing one. Rebuilding Benton from source under the new path reproduces the shipped container's content hash exactly, so no asset changed.
+
+- `docs/data-sources.md` rewritten as a user-facing document. It now covers how to obtain the containers (`lobemap fetch`, the fourteen artifacts, the sha256 manifest, `--nostains` and `--check`) and what processing is applied before the viewer opens anything: unit conversion, mesh repair with per-atlas figures, the dropped `AL-` qualifier, and the male CNS neuropil set being cut to the brain. Behind-the-scenes rationale, abandoned alternatives and material already in the README are gone, along with a dangling pointer to untracked notes. The FAFB synapse table now cites its actual location, and the unrelated Grabe 2016 citation is dropped.
+
 - The README flags the uneven quality of the neuPrint meshes: several glomeruli in the hemibrain and male CNS atlases have holes or are in multiple pieces, as published.
 
 - Spelling throughout the repository is American English. This renames one function, `normalise` to `normalize`, in `core.names` and `core.reference`; the published data files under `registry/sources/` keep their own wording.
