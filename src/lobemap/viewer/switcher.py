@@ -159,10 +159,14 @@ class SpaceSwitcher(QWidget):
             self.status.setText(f"loading {want}...")
             self.session.teardown()
             self.session = self._load(want)
-            # A scene is built unmirrored, so the control has to re-assert
-            # itself onto the new one rather than the state being implicit.
-            if self.mirror.isChecked():
-                self.session.set_mirror(True)
+            # A new space comes up unmirrored and the control follows it.
+            # The mirror is a property of how one space is being looked
+            # at, not a preference: carrying it across would hand back a
+            # reflected scene without anything having been clicked, and
+            # the reflection is the one thing here that can make left
+            # read as right. Safe during the switch because `_busy` makes
+            # `_on_mirror` a no-op, and the new scene is already plain.
+            self.mirror.setChecked(False)
             self.settle()
             self.status.setText("")
         except Exception as exc:                      # noqa: BLE001
@@ -171,8 +175,7 @@ class SpaceSwitcher(QWidget):
             self.status.setText(f"{want} failed: {exc}")
             with contextlib.suppress(Exception):
                 self.session = self._load(previous)
-                if self.mirror.isChecked():
-                    self.session.set_mirror(True)
+                self.mirror.setChecked(False)
             index = self.combo.findData(self.session.space)
             if index >= 0:
                 self.combo.setCurrentIndex(index)

@@ -187,13 +187,13 @@ class AtlasSurface:
         )
         self.compact_delay_ms = compact_delay_ms
         self._timer = None
-        #: Whether the VIEW is reflected. Only the winding depends on it;
-        #: the reflection itself is a world transform on the layer.
-        self.mirrored = False
+        #: (axis, centre) while the view is reflected, else None.
+        self._mirror: tuple[int, float] | None = None
         self._resident: list[int] = sorted(self.selection)
         v, f, vals = meshset.select(sorted(self.selection))
+        v, f = self._present(v, f)
         self.layer = viewer.add_surface(
-            (v, self._oriented(f), vals),
+            (v, f, vals),
             name=name,
             colormap=step_colormap(self.colors, name=f"{name}-colors"),
             contrast_limits=contrast_limits_for(n),
@@ -205,38 +205,56 @@ class AtlasSurface:
 
     # -- orientation -----------------------------------------------------
 
-    def _oriented(self, faces):
-        """Faces wound so the triangles stay outward-facing in the view.
+    def _present(self, vertices, faces):
+        """Geometry as UPLOADED: reflected, if the view is reflected.
 
-        A mirror has determinant -1, which reverses the orientation of
-        every triangle, so reversing each one's vertex order is what
-        keeps its normal pointing out of the mesh instead of into it.
+        The reflection is applied to the vertices here rather than to
+        `layer.affine`, and the winding is reversed along with it. Both
+        are needed, for one reason.
 
-        It does NOT fix the shading, which is why it was written: under
-        a mirror the glomeruli still read as lit from inside. So vispy
-        is not taking its lighting from this winding, and the cause is
-        unresolved. Kept because outward-facing triangles are correct
-        either way, and measured by the signed volume in
-        `tests/test_mirror.py` -- not by appearance, which it does not
-        change.
+        napari loads a layer's affine into the vispy NODE transform. A
+        determinant -1 transform there reverses the rasterized winding,
+        which flips `gl_FrontFacing`, and vispy's smooth shading path
+        negates the normal by exactly that:
 
-        Applied here rather than once at the toggle because `compact`
-        re-uploads geometry straight from the MeshSet on a debounce, and
-        a flip written only to the layer would be undone by the next
-        selection change.
+            normal = gl_FrontFacing ? normal : -normal;
+
+        so every glomerulus comes out lit from inside. Reflecting the
+        vertices instead keeps the node transform proper and the facing
+        correct; reversing the winding then puts back the orientation
+        the reflection took away.
+
+        It is also why re-winding ALONE does nothing visible: it flips
+        the MeshData normal and `gl_FrontFacing` together, and they
+        cancel in that expression. Measured on GRABE in 3D, node signed
+        volume and the share of outward normals:
+
+            unmirrored                  +2.672e+05   76.8% outward
+            affine mirror, re-wound     -2.672e+05   23.2% outward
+            affine mirror, not re-wound +2.672e+05   76.8% outward
+
+        The MeshSet is untouched throughout. This changes only what is
+        handed to napari, so the data on disk and every measurement
+        taken from it are unaffected.
         """
-        return faces[:, ::-1] if self.mirrored else faces
+        if self._mirror is None:
+            return vertices, faces
+        axis, centre = self._mirror
+        v = np.array(vertices, dtype=np.float32, copy=True)
+        v[:, axis] = np.float32(2.0 * centre) - v[:, axis]
+        return v, np.ascontiguousarray(faces[:, ::-1])
 
-    def set_mirrored(self, on: bool) -> None:
-        """Re-wind for a reflected view, or back again."""
-        on = bool(on)
-        if on == self.mirrored:
+    def set_mirror(self, axis: int | None, centre: float = 0.0) -> None:
+        """Reflect this surface about `centre` on `axis`, or stop."""
+        want = None if axis is None else (int(axis), float(centre))
+        if want == self._mirror:
             return
-        self.mirrored = on
+        self._mirror = want
         if not self._resident:
             return
         v, f, vals = self.meshset.select(self._resident)
-        self.layer.data = (v, self._oriented(f), vals)
+        v, f = self._present(v, f)
+        self.layer.data = (v, f, vals)
 
     # -- selection -------------------------------------------------------
     #
@@ -313,7 +331,8 @@ class AtlasSurface:
             self._set_visible_if_changed(False)
             return
         v, f, vals = self.meshset.select(want)
-        self.layer.data = (v, self._oriented(f), vals)
+        v, f = self._present(v, f)
+        self.layer.data = (v, f, vals)
         self._resident = want
         self._set_visible_if_changed(True)
         self._apply_alpha()

@@ -656,13 +656,19 @@ def mirror_matrix(ndim: int, center: float, axis: int = MIRROR_AXIS):
 
 def apply_mirror(layers, on: bool, center: float,
                  axis: int = MIRROR_AXIS) -> None:
-    """Reflect every layer, or put them all back.
+    """Reflect layers that carry no normals, or put them back.
 
     Set on `layer.affine`, which napari applies in WORLD space after the
     layer's own scale and translate. That is what lets one matrix serve
-    meshes in micrometers and images in voxels alike: the images keep the
-    scale and translate that place them, and the reflection composes on
+    images in voxels and contours in micrometers alike: each keeps the
+    scale and translate that place it, and the reflection composes on
     top rather than replacing it.
+
+    NOT for the surfaces. napari loads the affine into the vispy node
+    transform, and a determinant -1 transform there inverts the shading;
+    `AtlasSurface._present` explains it and reflects their vertices
+    instead. Images, labels and contour outlines have no normals, so for
+    them the cheap route is also the correct one.
 
     Layers currently detached by the display mode are included. They are
     the same objects when re-appended, so the affine travels with them
@@ -883,7 +889,16 @@ class SceneSession:
     def all_layers(self) -> list:
         """Every layer this session owns, detached ones included."""
         out = [s.layer for s in self.surfaces.values()]
-        out += [c.layer for c in self.contours.values()]
+        out += self.affine_layers()
+        return out
+
+    def affine_layers(self) -> list:
+        """Those the mirror moves by `affine`: everything without normals.
+
+        The surfaces are absent on purpose -- they reflect their own
+        vertices; see `AtlasSurface._present`.
+        """
+        out = [c.layer for c in self.contours.values()]
         out += [layer for layer in self.images if layer not in out]
         return out
 
@@ -896,13 +911,15 @@ class SceneSession:
         error this project has had to correct most often.
         """
         self.mirrored = bool(on)
-        apply_mirror(self.all_layers(), self.mirrored, self.mirror_center)
-        # The reflection reverses every triangle's orientation, so the
-        # meshes are re-wound to keep them outward-facing. This does not
-        # correct the shading; see `AtlasSurface._oriented`.
+        # Two routes on purpose: the meshes reflect their own vertices so
+        # that the node transform stays proper and the shading holds, and
+        # everything without normals rides on `affine`.
         for surface in self.surfaces.values():
             with contextlib.suppress(Exception):
-                surface.set_mirrored(self.mirrored)
+                surface.set_mirror(
+                    MIRROR_AXIS if self.mirrored else None, self.mirror_center
+                )
+        apply_mirror(self.affine_layers(), self.mirrored, self.mirror_center)
         space = self.registry.spaces.get(self.space)
         if space is not None:
             apply_axis_mode(
